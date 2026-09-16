@@ -64,7 +64,7 @@
     .seat-num { font-size: 0.75rem; font-weight: bold; color: #78350f; border-bottom: 1px dashed #fde68a; padding-bottom: 2px; }
     .seat-val { font-size: 1rem; font-weight: bold; color: #b45309; min-height: 20px; }
     
-    /* 繳交狀態顏色 */
+    /* 繳交色彩樣式 */
     .seat-cell.done { background: #dcfce7; border-color: #16a34a; }
     .seat-cell.done .seat-val { color: #15803d; }
     .seat-cell.late { background: #fed7aa; border-color: #ea580c; }
@@ -82,7 +82,6 @@
       <button class="btn-action" onclick="loadGrid()">切換</button>
     </div>
 
-    <!-- 歷次作業選單與整欄刪除 -->
     <div class="header-row">
       <select id="historySelect" onchange="selectHistory(this.value)" style="flex: 1;">
         <option value="">📂 翻歷史紀錄（歷次作業）...</option>
@@ -90,7 +89,7 @@
       <button class="btn-danger" onclick="deleteCurrentAssignment()">🗑️ 刪除</button>
     </div>
 
-    <!-- 精簡實用模式列：打勾、補交、退回、手打、橡皮擦 -->
+    <!-- 模式選擇 -->
     <div class="mode-bar">
       <div class="mode-btn active" onclick="setMode('✓', this)">打勾 ✓</div>
       <div class="mode-btn" onclick="setMode('補', this)">補交</div>
@@ -111,7 +110,7 @@
     
     <div id="statusText" class="feedback">相機連掃中...</div>
 
-    <!-- 結算按鈕 -->
+    <!-- 儲存結算大按鈕 -->
     <button class="btn-save-all" onclick="saveAndFinish()">💾 儲存並結算本班作業</button>
 
     <!-- 1~50 號黃卡號碼格 -->
@@ -119,7 +118,7 @@
   </div>
 
   <script>
-    // ⚠️ 請確認為您的 Apps Script 網址
+    // 專屬 Apps Script API 網址
     const API_URL = "https://script.google.com/macros/s/AKfycbzhsDQrNLHfKRJtuWsqbVop18iSuN-VsB9VAj1x8jBHmTfRKNHU2eqWaeLnHSt-g2oOFw/exec";
 
     let currentVal = '✓';
@@ -131,7 +130,7 @@
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
-    // 超商級穿透力大音量嗶聲（方波 + 1400Hz + 音量 1.0）
+    // 超商級穿透力大音量嗶聲（方波 + 1400Hz + 最大音量）
     function beep(freq = 1400, duration = 0.1) {
       try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -170,7 +169,7 @@
         });
         await loadGrid();
       } catch(e) {
-        document.getElementById('statusText').textContent = '後端連線失敗，請檢查 API 網址';
+        document.getElementById('statusText').textContent = '後端連線失敗，請檢查網路連線';
       }
       startCamera();
     };
@@ -197,7 +196,6 @@
       }
     }
 
-    // 根據值決定黃卡方格的色彩樣式
     function getCellStatusClass(val) {
       if (!val) return '';
       if (val === '補') return 'late';
