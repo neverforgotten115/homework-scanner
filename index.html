@@ -3,99 +3,116 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>作業掃碼連掃系統</title>
+  <title>數位作業黃卡系統</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { margin: 0; padding: 12px; background: #f1f5f9; color: #1e293b; }
-    .card { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-    h2 { margin: 0 0 10px 0; font-size: 1.1rem; }
-    .form-row { display: flex; gap: 8px; margin-bottom: 10px; }
-    select, input { flex: 1; padding: 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 1rem; outline: none; }
-    .status-group { display: flex; gap: 6px; }
-    .status-btn { flex: 1; padding: 10px 0; border: 2px solid transparent; border-radius: 8px; background: #e2e8f0; font-weight: bold; font-size: 0.95rem; cursor: pointer; text-align: center; }
-    .status-btn.active.on-time { background: #dcfce7; border-color: #22c55e; color: #15803d; }
-    .status-btn.active.late { background: #fef9c3; border-color: #eab308; color: #854d0e; }
-    .status-btn.active.fix { background: #e0f2fe; border-color: #0284c7; color: #0369a1; }
-    #reader-container { width: 100%; border-radius: 12px; overflow: hidden; background: #000; min-height: 250px; }
+    body { margin: 0; padding: 10px; background: #eceff1; color: #263238; }
+    
+    .yellow-card {
+      background: #fef9c3; border: 2px solid #ca8a04; border-radius: 12px;
+      padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 12px;
+    }
+    .header-row { display: flex; gap: 6px; margin-bottom: 8px; }
+    select, input { padding: 8px 10px; border: 1.5px solid #d97706; border-radius: 6px; font-size: 0.95rem; background: #fff; outline: none; }
+    
+    .btn-action { background: #ca8a04; color: #fff; border: none; border-radius: 6px; padding: 0 12px; font-weight: bold; cursor: pointer; }
+    .btn-danger { background: #ef4444; color: #fff; border: none; border-radius: 6px; padding: 0 10px; font-weight: bold; cursor: pointer; }
+
+    /* 模式選擇列 */
+    .mode-bar { display: flex; gap: 4px; margin-bottom: 10px; overflow-x: auto; }
+    .mode-btn {
+      flex: 1; min-width: 60px; padding: 8px 2px; border: 1.5px solid #ca8a04; background: #fff;
+      border-radius: 6px; font-weight: bold; font-size: 0.85rem; text-align: center; cursor: pointer; white-space: nowrap;
+    }
+    .mode-btn.active { background: #eab308; color: #fff; }
+    .mode-btn.eraser { color: #dc2626; }
+    .mode-btn.eraser.active { background: #dc2626; color: #fff; }
+
+    /* 相機畫面 */
+    #reader-box { width: 100%; border-radius: 8px; overflow: hidden; background: #000; margin-bottom: 8px; }
     #reader { width: 100%; }
-    .feedback-box { margin-top: 10px; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 1rem; display: none; }
-    .feedback-box.success { background: #dcfce7; color: #166534; display: block; }
-    .feedback-box.warn { background: #fee2e2; color: #991b1b; display: block; }
-    .stat-badge-row { display: flex; justify-content: space-between; gap: 6px; margin: 10px 0; }
-    .badge { flex: 1; padding: 8px; border-radius: 8px; text-align: center; font-size: 0.85rem; font-weight: bold; }
-    .badge-total { background: #f1f5f9; color: #475569; }
-    .badge-sub { background: #dcfce7; color: #166534; }
-    .badge-missing { background: #fee2e2; color: #991b1b; }
-    .missing-box { background: #fff1f2; border: 1px dashed #f43f5e; padding: 10px; border-radius: 8px; }
-    .missing-title { font-size: 0.9rem; font-weight: bold; color: #be123c; margin-bottom: 4px; display: flex; justify-content: space-between; }
-    .missing-list { font-size: 1.15rem; font-weight: bold; color: #e11d48; }
-    .btn-copy { background: #be123c; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+    .feedback { text-align: center; font-weight: bold; font-size: 0.95rem; margin-bottom: 8px; min-height: 22px; color: #854d0e; }
+
+    /* 黃卡 1~50 號方格矩陣 */
+    .grid-container {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px;
+    }
+    .seat-cell {
+      background: #fff; border: 1.5px solid #d97706; border-radius: 6px;
+      text-align: center; padding: 6px 2px; min-height: 52px; cursor: pointer;
+      display: flex; flex-direction: column; justify-content: space-between;
+      user-select: none;
+    }
+    .seat-cell:active { transform: scale(0.96); }
+    .seat-num { font-size: 0.75rem; font-weight: bold; color: #78350f; border-bottom: 1px dashed #fde68a; padding-bottom: 2px; }
+    .seat-val { font-size: 1rem; font-weight: bold; color: #b45309; min-height: 20px; }
+    
+    /* 格子狀態色彩 */
+    .seat-cell.done { background: #dcfce7; border-color: #16a34a; }
+    .seat-cell.done .seat-val { color: #15803d; }
+    .seat-cell.late { background: #fed7aa; border-color: #ea580c; }
+    .seat-cell.late .seat-val { color: #c2410c; }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <h2>📋 作業登記設定</h2>
-    <div class="form-row">
-      <select id="classSelect" onchange="refreshSummary()"><option>載入中...</option></select>
-      <input type="text" id="hwName" placeholder="作業名稱" value="今日作業">
+  <div class="yellow-card">
+    <div class="header-row">
+      <select id="classSelect" onchange="loadGrid()" style="width: 35%;"></select>
+      <input type="text" id="hwInput" placeholder="作業名稱" style="flex: 1;" value="今日作業">
+      <button class="btn-action" onclick="loadGrid()">切換</button>
     </div>
-    <div class="status-group">
-      <div class="status-btn active on-time" onclick="setStatus('準時繳交', this)">✅ 準時繳交</div>
-      <div class="status-btn late" onclick="setStatus('補交', this)">🟡 補交</div>
-      <div class="status-btn fix" onclick="setStatus('退回訂正', this)">🔵 需訂正</div>
-    </div>
-  </div>
 
-  <div class="card">
-    <div id="reader-container">
-      <div id="reader"></div>
+    <!-- 歷史作業快速切換與刪除 -->
+    <div class="header-row">
+      <select id="historySelect" onchange="selectHistory(this.value)" style="flex: 1;">
+        <option value="">📂 翻歷史紀錄（歷次作業）...</option>
+      </select>
+      <button class="btn-danger" onclick="deleteCurrentAssignment()">🗑️ 刪除</button>
     </div>
-    <div id="feedback" class="feedback-box"></div>
-  </div>
 
-  <div class="card">
-    <h2>📊 本班收件進度</h2>
-    <div class="stat-badge-row">
-      <div class="badge badge-total" id="badgeTotal">應收: 0 人</div>
-      <div class="badge badge-sub" id="badgeSub">已收: 0 人</div>
-      <div class="badge badge-missing" id="badgeMissing">缺交: 0 人</div>
+    <!-- 登記模式 -->
+    <div class="mode-bar">
+      <div class="mode-btn active" onclick="setMode('✓', this)">打勾 ✓</div>
+      <div class="mode-btn" onclick="setMode('100', this)">100</div>
+      <div class="mode-btn" onclick="setMode('甲', this)">甲</div>
+      <div class="mode-btn" onclick="setMode('補', this)">補交</div>
+      <div class="mode-btn eraser" onclick="setMode('', this)">🧹 橡皮擦</div>
+      <div class="mode-btn" onclick="setCustomMode(this)">自訂</div>
     </div>
-    <div class="missing-box">
-      <div class="missing-title">
-        <span>❌ 缺交座號名單</span>
-        <button class="btn-copy" onclick="copyMissing()">複製名單</button>
-      </div>
-      <div class="missing-list" id="missingNumbers">尚未結算</div>
-    </div>
+
+    <!-- 相機連掃區 -->
+    <div id="reader-box"><div id="reader"></div></div>
+    <div id="statusText" class="feedback">相機待命中...</div>
+
+    <!-- 數位黃卡號碼格 (支援點擊手動登記) -->
+    <div class="grid-container" id="gridArea"></div>
   </div>
 
   <script>
-    // ⚠️ 請填入你的 Apps Script Web App 網址
-    const API_URL = "https://script.google.com/a/macros/tbps.cyc.edu.tw/s/AKfycbzhsDQrNLHfKRJtuWsqbVop18iSuN-VsB9VAj1x8jBHmTfRKNHU2eqWaeLnHSt-g2oOFw/exec";
+    // ⚠️ 請填入第二步取得的 Apps Script 網址
+    const API_URL = "https://script.google.com/macros/s/AKfycbzhsDQrNLHfKRJtuWsqbVop18iSuN-VsB9VAj1x8jBHmTfRKNHU2eqWaeLnHSt-g2oOFw/exec";
 
-    let currentStatus = '準時繳交';
+    let currentVal = '✓';
+    let currentStudents = [];
+    let html5QrCode = null;
     let lastScanCode = '';
     let lastScanTime = 0;
-    let html5QrCode = null;
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playBeep(freq = 880) {
+    function beep(freq = 950) {
       try {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.frequency.value = freq;
-        osc.start();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.frequency.value = freq; osc.start();
         gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.08);
         osc.stop(audioCtx.currentTime + 0.08);
       } catch(e) {}
     }
 
     window.onload = async function() {
-      // 載入班級名冊
       try {
         const res = await fetch(`${API_URL}?action=getClasses`);
         const data = await res.json();
@@ -103,94 +120,138 @@
         sel.innerHTML = '';
         data.classes.forEach(c => {
           const opt = document.createElement('option');
-          opt.value = c;
-          opt.textContent = c + ' 班';
+          opt.value = c; opt.textContent = c + ' 班';
           sel.appendChild(opt);
         });
-        refreshSummary();
+        await loadGrid();
       } catch(e) {
-        showFeedback("無法連線後台 API，請確認網址", false);
+        document.getElementById('statusText').textContent = '後端連線失敗，請檢查 API 網址';
       }
-      startLiveScanner();
+      startCamera();
     };
 
-    function setStatus(status, elem) {
-      currentStatus = status;
-      document.querySelectorAll('.status-btn').forEach(btn => {
-        btn.className = 'status-btn ' + (btn.classList.contains('on-time') ? 'on-time' : btn.classList.contains('late') ? 'late' : 'fix');
-      });
+    function setMode(val, elem) {
+      currentVal = val;
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
       elem.classList.add('active');
     }
 
-    function startLiveScanner() {
-      html5QrCode = new Html5Qrcode("reader");
-      const config = { fps: 12, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 };
-      
-      // 獨立頂層網域下，iOS Safari 會正常跳出鏡頭授權！
-      html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-        .catch(err => showFeedback("相機授權未放行：" + err, false));
+    function setCustomMode(elem) {
+      const score = prompt('請輸入自訂分數或符號（例如 95、A、退）：', '90');
+      if (score !== null) setMode(score, elem);
     }
 
-    async function onScanSuccess(decodedText) {
-      const now = Date.now();
-      if (decodedText === lastScanCode && (now - lastScanTime) < 2200) return;
-      lastScanCode = decodedText;
-      lastScanTime = now;
+    async function loadGrid() {
+      const c = document.getElementById('classSelect').value;
+      const hw = document.getElementById('hwInput').value;
+      if (!c) return;
 
-      if (navigator.vibrate) navigator.vibrate(60);
-      playBeep(900);
-
-      const hw = document.getElementById('hwName').value || '今日作業';
-      showFeedback(`登記中: ${decodedText}...`, true);
-
+      document.getElementById('statusText').textContent = `正在讀取 ${c} 班資料...`;
       try {
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          body: JSON.stringify({ qrCode: decodedText, assignment: hw, status: currentStatus })
+        const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hw)}`);
+        const data = await res.json();
+        currentStudents = data.students;
+
+        // 更新歷史紀錄選單
+        const hSel = document.getElementById('historySelect');
+        hSel.innerHTML = '<option value="">📂 翻歷史紀錄（歷次作業）...</option>';
+        data.assignments.forEach(a => {
+          const opt = document.createElement('option');
+          opt.value = a; opt.textContent = '📄 ' + a;
+          if (a === hw) opt.selected = true;
+          hSel.appendChild(opt);
         });
-        const result = await res.json();
-        if (result.success) {
-          showFeedback(`✅ ${result.student.seatNo}號 ${result.student.name}（${currentStatus}）已登記`, true);
-          updateSummaryView(result.summary);
-        } else {
-          playBeep(350);
-          showFeedback(`❌ ${result.message}`, false);
-        }
+
+        // 繪製黃卡號碼格
+        const grid = document.getElementById('gridArea');
+        grid.innerHTML = '';
+        currentStudents.forEach(st => {
+          const val = data.currentRecords[st.seat] || '';
+          const cell = document.createElement('div');
+          cell.id = `seat-${st.seat}`;
+          cell.className = 'seat-cell ' + (val ? (val === '補' ? 'late' : 'done') : '');
+          cell.innerHTML = `<span class="seat-num">${st.seat} ${st.name}</span><span class="seat-val">${val}</span>`;
+          cell.onclick = () => saveRecord(st.seat, currentVal);
+          grid.appendChild(cell);
+        });
+        document.getElementById('statusText').textContent = `載入完成：${c} 班共 ${currentStudents.length} 人`;
       } catch(e) {
-        showFeedback("記錄更新失敗：" + e, false);
+        document.getElementById('statusText').textContent = '讀取失敗：' + e;
       }
     }
 
-    async function refreshSummary() {
+    function selectHistory(hwName) {
+      if (!hwName) return;
+      document.getElementById('hwInput').value = hwName;
+      loadGrid();
+    }
+
+    function startCamera() {
+      html5QrCode = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: { width: 200, height: 200 }, aspectRatio: 1.0 };
+      
+      html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+        const now = Date.now();
+        if (decodedText === lastScanCode && (now - lastScanTime) < 2000) return;
+        lastScanCode = decodedText;
+        lastScanTime = now;
+
+        // 解析 QR Code（如 301-07 取 7）
+        const parts = decodedText.split('-');
+        const seat = parseInt(parts[1] || parts[0]);
+        if (!isNaN(seat)) {
+          if (navigator.vibrate) navigator.vibrate(60);
+          beep(950);
+          saveRecord(seat, currentVal);
+        }
+      }).catch(err => {
+        document.getElementById('statusText').textContent = '相機啟動受阻：請確認 Safari 允許相機存取';
+      });
+    }
+
+    async function saveRecord(seatNo, val) {
       const c = document.getElementById('classSelect').value;
-      const hw = document.getElementById('hwName').value || '今日作業';
-      if (!c) return;
+      const hw = document.getElementById('hwInput').value;
+
+      // 前端瞬時反應亮燈（零延遲）
+      const cell = document.getElementById(`seat-${seatNo}`);
+      if (cell) {
+        cell.className = 'seat-cell ' + (val ? (val === '補' ? 'late' : 'done') : '');
+        cell.querySelector('.seat-val').textContent = val;
+      }
+      document.getElementById('statusText').textContent = val ? `✅ ${seatNo} 號 登記：${val}` : `🧹 ${seatNo} 號 紀錄已清除`;
+
+      // 背景發送至 Google 試算表
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ classId: c, seatNo: seatNo, assignment: hw, val: val })
+      });
+    }
+
+    async function deleteCurrentAssignment() {
+      const c = document.getElementById('classSelect').value;
+      const hw = document.getElementById('hwInput').value;
+      if (!hw) return;
+
+      if (!confirm(`確定要徹底刪除【${c} 班】的「${hw}」整欄紀錄嗎？（無法復原）`)) return;
+
+      document.getElementById('statusText').textContent = `正在刪除「${hw}」...`;
       try {
-        const res = await fetch(`${API_URL}?action=getSummary&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hw)}`);
-        const summary = await res.json();
-        updateSummaryView(summary);
-      } catch(e) {}
-    }
-
-    function updateSummaryView(summary) {
-      if (!summary) return;
-      document.getElementById('badgeTotal').textContent = `應收: ${summary.total} 人`;
-      document.getElementById('badgeSub').textContent = `已收: ${summary.submittedCount} 人`;
-      document.getElementById('badgeMissing').textContent = `缺交: ${summary.missing.length} 人`;
-      document.getElementById('missingNumbers').textContent = summary.missing.length > 0 ? summary.missing.join(', ') : '🎉 全班繳齊！';
-    }
-
-    function copyMissing() {
-      const text = document.getElementById('missingNumbers').textContent;
-      const c = document.getElementById('classSelect').value;
-      const hw = document.getElementById('hwName').value;
-      navigator.clipboard.writeText(`【${c}班 ${hw} 缺交名單】\n座號：${text}`).then(() => alert('已複製缺交名單！'));
-    }
-
-    function showFeedback(msg, isSuccess) {
-      const fb = document.getElementById('feedback');
-      fb.className = 'feedback-box ' + (isSuccess ? 'success' : 'warn');
-      fb.textContent = msg;
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'deleteAssignment', classId: c, assignment: hw })
+        });
+        const result = await res.json();
+        if (result.success) {
+          alert(`已刪除「${hw}」！`);
+          document.getElementById('hwInput').value = '今日作業';
+          loadGrid();
+        } else {
+          alert('刪除失敗：' + result.error);
+        }
+      } catch(e) {
+        alert('連線失敗：' + e);
+      }
     }
   </script>
 </body>
