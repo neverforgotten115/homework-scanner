@@ -19,7 +19,7 @@
     .btn-create { background: #ca8a04; color: #fff; border: none; border-radius: 8px; padding: 0 14px; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
     .btn-danger { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 0 10px; font-weight: bold; cursor: pointer; }
 
-    /* 模式列 */
+    /* 模式選擇列 */
     .mode-bar { display: flex; gap: 6px; margin-bottom: 10px; }
     .mode-btn {
       flex: 1; padding: 10px 2px; border: 1.5px solid #ca8a04; background: #fff;
@@ -155,9 +155,7 @@
     let lastScanCode = '';
     let lastScanTime = 0;
 
-    // ⚡ 本地高速快取機制：已載入過的班級資料暫存在記憶體
     const localCache = {};
-
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
     function beep(freq = 1400, duration = 0.1) {
@@ -201,7 +199,7 @@
       document.getElementById('loadingText').textContent = text || '成功！';
       setTimeout(() => {
         document.getElementById('loadingOverlay').style.display = 'none';
-      }, 400); // 縮減提示時間，更俐落
+      }, 400);
     }
 
     function showError(text) {
@@ -234,12 +232,10 @@
       startCamera();
     };
 
-    // ⚡ 飆速換班：單趟請求＋本地記憶體快取
     async function onClassChange() {
       const c = document.getElementById('classSelect').value;
       if (!c) return;
 
-      // 若快取中已有資料，瞬間以 0.01 秒還原畫面
       if (localCache[c]) {
         applyDataToUI(localCache[c]);
         return;
@@ -249,7 +245,7 @@
       try {
         const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=`);
         const data = await res.json();
-        localCache[c] = data; // 存入快取
+        localCache[c] = data;
         applyDataToUI(data);
         showSuccess('完成！');
       } catch(e) {
@@ -298,7 +294,7 @@
       try {
         const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hw)}`);
         const data = await res.json();
-        localCache[c] = data; // 更新快取
+        localCache[c] = data;
         applyDataToUI(data);
         showSuccess('建立成功！');
       } catch(e) {
@@ -329,28 +325,41 @@
       if (val === 'KEYIN') {
         document.getElementById('statusText').textContent = '⌨️ 手打模式：點擊座號格自訂分數';
       } else if (val === '退') {
-        document.getElementById('statusText').textContent = '🔴 退回模式：點擊座號標記退回訂正';
+        document.getElementById('statusText').textContent = '🔴 退回模式：點擊座號標記退回（重複點擊取消）';
       } else if (val === '') {
-        document.getElementById('statusText').textContent = '🧹 橡皮擦：點擊座號清除該格紀錄';
+        document.getElementById('statusText').textContent = '🧹 橡皮擦：點擊座號清空紀錄';
       } else {
-        document.getElementById('statusText').textContent = `模式：【${val}】點選座號快速登記`;
+        document.getElementById('statusText').textContent = `模式：【${val}】點一下登記，再點一下取消`;
       }
     }
 
+    // ⚡ 核心優化：點一下登記，再點一下取消（Toggle 機制）
     function handleCellClick(seatNo, studentName) {
       const hw = document.getElementById('hwInput').value.trim();
       if (!hw) {
         alert('請先輸入作業名稱並按【建立】！');
         return;
       }
+      
+      const cell = document.getElementById(`seat-${seatNo}`);
+      const currentCellVal = cell ? cell.querySelector('.seat-val').textContent.trim() : '';
+
       if (currentVal === 'KEYIN') {
-        const score = prompt(`請輸入【${seatNo} 號 ${studentName}】的分數：`, '100');
-        if (score !== null && score.trim() !== '') {
+        const score = prompt(`請輸入【${seatNo} 號 ${studentName}】的分數（留空按確定可清除）：`, currentCellVal || '100');
+        if (score !== null) {
           saveRecord(seatNo, studentName, score.trim());
         }
       } else {
-        beep(1400, 0.06);
-        saveRecord(seatNo, studentName, currentVal);
+        let nextVal = currentVal;
+        
+        // 若該格已經是當前模式的值，點擊自動取消變回空白
+        if (currentCellVal === currentVal) {
+          nextVal = '';
+        }
+
+        // 登記高頻聲 (1400Hz)，取消低頻柔和聲 (880Hz)
+        beep(nextVal ? 1400 : 880, 0.06);
+        saveRecord(seatNo, studentName, nextVal);
       }
     }
 
@@ -427,13 +436,12 @@
         cell.querySelector('.seat-val').textContent = val;
       }
       
-      // 同步更新快取
       if (localCache[c] && localCache[c].currentRecords) {
         localCache[c].currentRecords[seatNo] = val;
       }
 
       const nameTag = studentName ? `（${studentName}）` : '';
-      document.getElementById('statusText').textContent = val ? `✅ ${seatNo} 號 ${nameTag} 登記：${val}` : `🧹 ${seatNo} 號 ${nameTag} 已清除`;
+      document.getElementById('statusText').textContent = val ? `✅ ${seatNo} 號 ${nameTag} 登記：${val}` : `⚪ ${seatNo} 號 ${nameTag} 取消登記`;
 
       fetch(API_URL, {
         method: 'POST',
@@ -491,7 +499,7 @@
         });
         const result = await res.json();
         if (result.success) {
-          delete localCache[c]; // 清除該班快取以強制重新讀取
+          delete localCache[c];
           showSuccess('刪除成功！');
           document.getElementById('hwInput').value = '';
           onClassChange();
