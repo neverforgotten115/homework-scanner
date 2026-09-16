@@ -16,7 +16,6 @@
     .header-row { display: flex; gap: 6px; margin-bottom: 8px; }
     select, input { padding: 9px 10px; border: 1.5px solid #d97706; border-radius: 8px; font-size: 1rem; background: #fff; outline: none; }
     
-    /* 建立按鈕 */
     .btn-create { background: #ca8a04; color: #fff; border: none; border-radius: 8px; padding: 0 14px; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
     .btn-danger { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 0 10px; font-weight: bold; cursor: pointer; }
 
@@ -58,7 +57,7 @@
     }
     .btn-save-all:active { background: #15803d; transform: scale(0.98); }
 
-    /* 數位黃卡 5 格矩陣 */
+    /* 5 格大按鍵矩陣 */
     .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
     .seat-cell {
       background: #fff; border: 2px solid #d97706; border-radius: 10px;
@@ -77,30 +76,29 @@
     .seat-cell.reject { background: #fee2e2; border-color: #ef4444; }
     .seat-cell.reject .seat-val { color: #dc2626; }
 
-    /* ⏳ 讀取中 / 讀取成功 浮動提示彈窗 */
+    /* 轉圈提示 */
     .loading-overlay {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.45); z-index: 9999;
+      background: rgba(0, 0, 0, 0.4); z-index: 9999;
       justify-content: center; align-items: center;
     }
     .loading-card {
-      background: #fff; padding: 22px 32px; border-radius: 16px;
+      background: #fff; padding: 20px 28px; border-radius: 16px;
       display: flex; flex-direction: column; align-items: center;
-      box-shadow: 0 12px 28px rgba(0,0,0,0.25); min-width: 200px; text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2); min-width: 180px; text-align: center;
     }
     .spinner {
-      width: 42px; height: 42px; border: 4px solid #e2e8f0;
+      width: 38px; height: 38px; border: 4px solid #e2e8f0;
       border-top: 4px solid #ca8a04; border-radius: 50%;
-      animation: spin 0.8s linear infinite; margin-bottom: 12px;
+      animation: spin 0.7s linear infinite; margin-bottom: 10px;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .loading-icon { font-size: 2.4rem; margin-bottom: 8px; display: none; }
-    .loading-text { font-size: 1.1rem; font-weight: bold; color: #1e293b; }
+    .loading-icon { font-size: 2.2rem; margin-bottom: 6px; display: none; }
+    .loading-text { font-size: 1.05rem; font-weight: bold; color: #1e293b; }
   </style>
 </head>
 <body>
 
-  <!-- 彈跳狀態視窗 -->
   <div id="loadingOverlay" class="loading-overlay">
     <div class="loading-card">
       <div id="spinner" class="spinner"></div>
@@ -111,13 +109,11 @@
 
   <div class="yellow-card">
     <div class="header-row">
-      <!-- 班級更動時觸發智慧切換 -->
       <select id="classSelect" onchange="onClassChange()" style="width: 35%;"></select>
       <input type="text" id="hwInput" placeholder="輸入作業名稱" style="flex: 1;" value="今日作業">
       <button class="btn-create" onclick="createOrLoadAssignment()">建立</button>
     </div>
 
-    <!-- 歷次作業選單 -->
     <div class="header-row">
       <select id="historySelect" onchange="selectHistory(this.value)" style="flex: 1;">
         <option value="">📂 翻歷史紀錄（歷次作業）...</option>
@@ -125,7 +121,6 @@
       <button class="btn-danger" onclick="deleteCurrentAssignment()">🗑️ 刪除</button>
     </div>
 
-    <!-- 模式選擇 -->
     <div class="mode-bar">
       <div class="mode-btn active" onclick="setMode('✓', this)">打勾 ✓</div>
       <div class="mode-btn" onclick="setMode('補', this)">補交</div>
@@ -134,7 +129,6 @@
       <div class="mode-btn eraser" onclick="setMode('', this)">🧹 擦除</div>
     </div>
 
-    <!-- 相機開關 -->
     <div class="cam-control-bar">
       <button id="camToggleBtn" class="btn-cam-switch on" onclick="toggleCamera()">📷 關閉相機</button>
       <button id="camReloadBtn" class="btn-reload-cam" onclick="startCamera()">🔄 重啟相機</button>
@@ -146,10 +140,8 @@
     
     <div id="statusText" class="feedback">就緒中...</div>
 
-    <!-- 儲存結算按鈕 -->
     <button class="btn-save-all" onclick="saveAndFinish()">💾 儲存並結算本班作業</button>
 
-    <!-- 1~50 號純座號大按鍵 -->
     <div class="grid-container" id="gridArea"></div>
   </div>
 
@@ -162,6 +154,9 @@
     let isCameraRunning = false;
     let lastScanCode = '';
     let lastScanTime = 0;
+
+    // ⚡ 本地高速快取機制：已載入過的班級資料暫存在記憶體
+    const localCache = {};
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
@@ -190,47 +185,34 @@
       setTimeout(() => beep(1318, 0.15), 110);
     }
 
-    /* 彈窗控制器：讀取中 -> 成功 */
     function showLoading(text) {
       const overlay = document.getElementById('loadingOverlay');
-      const spinner = document.getElementById('spinner');
-      const icon = document.getElementById('loadingIcon');
-      const msg = document.getElementById('loadingText');
-
-      spinner.style.display = 'block';
-      icon.style.display = 'none';
-      msg.textContent = text || '資料讀取中...';
+      document.getElementById('spinner').style.display = 'block';
+      document.getElementById('loadingIcon').style.display = 'none';
+      document.getElementById('loadingText').textContent = text || '讀取中...';
       overlay.style.display = 'flex';
     }
 
     function showSuccess(text) {
-      const spinner = document.getElementById('spinner');
+      document.getElementById('spinner').style.display = 'none';
       const icon = document.getElementById('loadingIcon');
-      const msg = document.getElementById('loadingText');
-
-      spinner.style.display = 'none';
       icon.style.display = 'block';
       icon.textContent = '✅';
-      msg.textContent = text || '讀取成功！';
-
+      document.getElementById('loadingText').textContent = text || '成功！';
       setTimeout(() => {
         document.getElementById('loadingOverlay').style.display = 'none';
-      }, 650);
+      }, 400); // 縮減提示時間，更俐落
     }
 
     function showError(text) {
-      const spinner = document.getElementById('spinner');
+      document.getElementById('spinner').style.display = 'none';
       const icon = document.getElementById('loadingIcon');
-      const msg = document.getElementById('loadingText');
-
-      spinner.style.display = 'none';
       icon.style.display = 'block';
       icon.textContent = '❌';
-      msg.textContent = text || '讀取失敗';
-
+      document.getElementById('loadingText').textContent = text || '失敗';
       setTimeout(() => {
         document.getElementById('loadingOverlay').style.display = 'none';
-      }, 1200);
+      }, 1000);
     }
 
     window.onload = async function() {
@@ -247,98 +229,97 @@
         });
         await onClassChange();
       } catch(e) {
-        showError('後端連線失敗');
+        showError('連線失敗');
       }
       startCamera();
     };
 
-    /* 當切換班級時觸發智慧適應 */
+    // ⚡ 飆速換班：單趟請求＋本地記憶體快取
     async function onClassChange() {
       const c = document.getElementById('classSelect').value;
       if (!c) return;
-      showLoading(`載入 ${c} 班資料...`);
 
+      // 若快取中已有資料，瞬間以 0.01 秒還原畫面
+      if (localCache[c]) {
+        applyDataToUI(localCache[c]);
+        return;
+      }
+
+      showLoading(`載入 ${c} 班資料...`);
       try {
-        // 先以空作業名稱請求，獲取該班真正的作業歷史
         const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=`);
         const data = await res.json();
-        const currentHwVal = document.getElementById('hwInput').value.trim();
-
-        let targetHw = '';
-        // 判定：若該班歷史紀錄包含目前文字，則繼續載入；否則自動切換到該班最新一項作業
-        if (currentHwVal && data.assignments.includes(currentHwVal)) {
-          targetHw = currentHwVal;
-        } else if (data.assignments && data.assignments.length > 0) {
-          targetHw = data.assignments[data.assignments.length - 1]; // 載入該班最新作業
-        } else {
-          targetHw = ''; // 該班完全沒作業，清空等待建立
-        }
-
-        document.getElementById('hwInput').value = targetHw;
-        await loadGrid(targetHw);
+        localCache[c] = data; // 存入快取
+        applyDataToUI(data);
+        showSuccess('完成！');
       } catch(e) {
-        showError('換班失敗：' + e);
+        showError('換班失敗');
       }
     }
 
-    /* 點擊「建立」按鈕 */
+    function applyDataToUI(data) {
+      const c = document.getElementById('classSelect').value;
+      currentStudents = data.students;
+
+      document.getElementById('hwInput').value = data.activeHw || '';
+
+      const hSel = document.getElementById('historySelect');
+      hSel.innerHTML = '<option value="">📂 翻歷史紀錄（歷次作業）...</option>';
+      data.assignments.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a; opt.textContent = '📄 ' + a;
+        if (a === data.activeHw) opt.selected = true;
+        hSel.appendChild(opt);
+      });
+
+      const grid = document.getElementById('gridArea');
+      grid.innerHTML = '';
+      currentStudents.forEach(st => {
+        const val = data.currentRecords[st.seat] || '';
+        const cell = document.createElement('div');
+        cell.id = `seat-${st.seat}`;
+        cell.className = 'seat-cell ' + getCellStatusClass(val);
+        cell.innerHTML = `<span class="seat-num">${st.seat}</span><span class="seat-val">${val}</span>`;
+        cell.onclick = () => handleCellClick(st.seat, st.name);
+        grid.appendChild(cell);
+      });
+
+      document.getElementById('statusText').textContent = data.activeHw ? `已載入：${c} 班「${data.activeHw}」` : `請在上方輸入作業名稱並按【建立】`;
+    }
+
     async function createOrLoadAssignment() {
       const hw = document.getElementById('hwInput').value.trim();
       const c = document.getElementById('classSelect').value;
       if (!hw) {
-        alert('請先在左邊欄位輸入作業名稱！');
+        alert('請先輸入作業名稱！');
         return;
       }
-      showLoading(`正在建立/載入「${hw}」...`);
-      await loadGrid(hw);
-    }
-
-    async function loadGrid(specifiedHw) {
-      const c = document.getElementById('classSelect').value;
-      const hw = specifiedHw !== undefined ? specifiedHw : document.getElementById('hwInput').value.trim();
-      if (!c) return;
-
+      showLoading(`載入「${hw}」...`);
       try {
         const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hw)}`);
         const data = await res.json();
-        currentStudents = data.students;
-
-        // 更新歷史選單
-        const hSel = document.getElementById('historySelect');
-        hSel.innerHTML = '<option value="">📂 翻歷史紀錄（歷次作業）...</option>';
-        data.assignments.forEach(a => {
-          const opt = document.createElement('option');
-          opt.value = a; opt.textContent = '📄 ' + a;
-          if (a === hw) opt.selected = true;
-          hSel.appendChild(opt);
-        });
-
-        // 渲染 1~N 號方格
-        const grid = document.getElementById('gridArea');
-        grid.innerHTML = '';
-        currentStudents.forEach(st => {
-          const val = data.currentRecords[st.seat] || '';
-          const cell = document.createElement('div');
-          cell.id = `seat-${st.seat}`;
-          cell.className = 'seat-cell ' + getCellStatusClass(val);
-          cell.innerHTML = `<span class="seat-num">${st.seat}</span><span class="seat-val">${val}</span>`;
-          cell.onclick = () => handleCellClick(st.seat, st.name);
-          grid.appendChild(cell);
-        });
-
-        const statusMsg = hw ? `已載入：${c} 班「${hw}」` : `請在上方輸入作業名稱並按【建立】`;
-        document.getElementById('statusText').textContent = statusMsg;
-        showSuccess('讀取成功！');
+        localCache[c] = data; // 更新快取
+        applyDataToUI(data);
+        showSuccess('建立成功！');
       } catch(e) {
-        showError('讀取失敗：' + e);
+        showError('載入失敗');
       }
     }
 
-    function selectHistory(hwName) {
+    async function selectHistory(hwName) {
       if (!hwName) return;
       document.getElementById('hwInput').value = hwName;
-      showLoading(`載入歷史紀錄「${hwName}」...`);
-      loadGrid(hwName);
+      const c = document.getElementById('classSelect').value;
+      showLoading(`載入「${hwName}」...`);
+      try {
+        const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hwName)}`);
+        const data = await res.json();
+        localCache[c] = data;
+        applyDataToUI(data);
+        showSuccess('載入完成！');
+      } catch(e) {
+        showError('載入失敗');
+      }
     }
 
     function setMode(val, elem) {
@@ -346,7 +327,7 @@
       document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
       elem.classList.add('active');
       if (val === 'KEYIN') {
-        document.getElementById('statusText').textContent = '⌨️ 手打模式：點擊座號格即可自訂分數';
+        document.getElementById('statusText').textContent = '⌨️ 手打模式：點擊座號格自訂分數';
       } else if (val === '退') {
         document.getElementById('statusText').textContent = '🔴 退回模式：點擊座號標記退回訂正';
       } else if (val === '') {
@@ -359,7 +340,7 @@
     function handleCellClick(seatNo, studentName) {
       const hw = document.getElementById('hwInput').value.trim();
       if (!hw) {
-        alert('請先輸入作業名稱並按【建立】，再開始登記！');
+        alert('請先輸入作業名稱並按【建立】！');
         return;
       }
       if (currentVal === 'KEYIN') {
@@ -446,6 +427,11 @@
         cell.querySelector('.seat-val').textContent = val;
       }
       
+      // 同步更新快取
+      if (localCache[c] && localCache[c].currentRecords) {
+        localCache[c].currentRecords[seatNo] = val;
+      }
+
       const nameTag = studentName ? `（${studentName}）` : '';
       document.getElementById('statusText').textContent = val ? `✅ ${seatNo} 號 ${nameTag} 登記：${val}` : `🧹 ${seatNo} 號 ${nameTag} 已清除`;
 
@@ -479,17 +465,14 @@
       playSuccessChime();
 
       let summaryText = `💾【${c} 班 - ${hw || '未命名作業'}】\n紀錄已完整儲存至雲端！\n\n應收：${currentStudents.length} 人\n已收：${submittedCount} 人`;
-      
       if (missingSeats.length > 0) {
         summaryText += `\n❌ 缺交座號 (${missingSeats.length}人)：${missingSeats.join(', ')}`;
       } else {
         summaryText += '\n🎉 全班繳齊！';
       }
-
       if (rejectSeats.length > 0) {
         summaryText += `\n🔴 退回待訂正 (${rejectSeats.length}人)：${rejectSeats.join(', ')}`;
       }
-
       alert(summaryText);
     }
 
@@ -508,6 +491,7 @@
         });
         const result = await res.json();
         if (result.success) {
+          delete localCache[c]; // 清除該班快取以強制重新讀取
           showSuccess('刪除成功！');
           document.getElementById('hwInput').value = '';
           onClassChange();
@@ -515,7 +499,7 @@
           showError('刪除失敗：' + result.error);
         }
       } catch(e) {
-        showError('連線失敗：' + e);
+        showError('連線失敗');
       }
     }
   </script>
