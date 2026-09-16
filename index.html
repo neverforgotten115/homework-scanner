@@ -9,6 +9,13 @@
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { margin: 0; padding: 10px; background: #f8fafc; color: #1e293b; }
     
+    /* 頂部極細靜默進度條 */
+    #topProgressBar {
+      position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+      background: #ca8a04; transition: width 0.25s ease, opacity 0.4s ease;
+      z-index: 10000; opacity: 0;
+    }
+
     .yellow-card {
       background: #fefce8; border: 2px solid #ca8a04; border-radius: 12px;
       padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 12px;
@@ -19,7 +26,7 @@
     .btn-create { background: #ca8a04; color: #fff; border: none; border-radius: 8px; padding: 0 14px; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
     .btn-danger { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 0 10px; font-weight: bold; cursor: pointer; }
 
-    /* 模式選擇列 */
+    /* 模式列 */
     .mode-bar { display: flex; gap: 6px; margin-bottom: 10px; }
     .mode-btn {
       flex: 1; padding: 10px 2px; border: 1.5px solid #ca8a04; background: #fff;
@@ -45,9 +52,11 @@
     #reader-box { width: 100%; border-radius: 8px; overflow: hidden; background: #000; margin-bottom: 8px; display: block; }
     #reader { width: 100%; }
 
+    /* 內嵌狀態列（無感狀態提示） */
     .feedback {
       text-align: center; font-weight: 800; font-size: 1.05rem; margin: 6px 0 10px 0;
       min-height: 28px; color: #854d0e; padding: 4px; background: rgba(254, 240, 138, 0.4); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
     }
 
     .btn-save-all {
@@ -75,37 +84,12 @@
     .seat-cell.late .seat-val { color: #c2410c; }
     .seat-cell.reject { background: #fee2e2; border-color: #ef4444; }
     .seat-cell.reject .seat-val { color: #dc2626; }
-
-    /* 轉圈提示 */
-    .loading-overlay {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.4); z-index: 9999;
-      justify-content: center; align-items: center;
-    }
-    .loading-card {
-      background: #fff; padding: 20px 28px; border-radius: 16px;
-      display: flex; flex-direction: column; align-items: center;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2); min-width: 180px; text-align: center;
-    }
-    .spinner {
-      width: 38px; height: 38px; border: 4px solid #e2e8f0;
-      border-top: 4px solid #ca8a04; border-radius: 50%;
-      animation: spin 0.7s linear infinite; margin-bottom: 10px;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .loading-icon { font-size: 2.2rem; margin-bottom: 6px; display: none; }
-    .loading-text { font-size: 1.05rem; font-weight: bold; color: #1e293b; }
   </style>
 </head>
 <body>
 
-  <div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-card">
-      <div id="spinner" class="spinner"></div>
-      <div id="loadingIcon" class="loading-icon">✅</div>
-      <div id="loadingText" class="loading-text">讀取中...</div>
-    </div>
-  </div>
+  <!-- 頂部靜默進度條 -->
+  <div id="topProgressBar"></div>
 
   <div class="yellow-card">
     <div class="header-row">
@@ -138,7 +122,7 @@
       <div id="reader"></div>
     </div>
     
-    <div id="statusText" class="feedback">就緒中...</div>
+    <div id="statusText" class="feedback">準備就緒</div>
 
     <button class="btn-save-all" onclick="saveAndFinish()">💾 儲存並結算本班作業</button>
 
@@ -155,7 +139,6 @@
     let lastScanCode = '';
     let lastScanTime = 0;
 
-    const localCache = {};
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
     function beep(freq = 1400, duration = 0.1) {
@@ -183,85 +166,110 @@
       setTimeout(() => beep(1318, 0.15), 110);
     }
 
-    function showLoading(text) {
-      const overlay = document.getElementById('loadingOverlay');
-      document.getElementById('spinner').style.display = 'block';
-      document.getElementById('loadingIcon').style.display = 'none';
-      document.getElementById('loadingText').textContent = text || '讀取中...';
-      overlay.style.display = 'flex';
-    }
-
-    function showSuccess(text) {
-      document.getElementById('spinner').style.display = 'none';
-      const icon = document.getElementById('loadingIcon');
-      icon.style.display = 'block';
-      icon.textContent = '✅';
-      document.getElementById('loadingText').textContent = text || '成功！';
-      setTimeout(() => {
-        document.getElementById('loadingOverlay').style.display = 'none';
-      }, 400);
-    }
-
-    function showError(text) {
-      document.getElementById('spinner').style.display = 'none';
-      const icon = document.getElementById('loadingIcon');
-      icon.style.display = 'block';
-      icon.textContent = '❌';
-      document.getElementById('loadingText').textContent = text || '失敗';
-      setTimeout(() => {
-        document.getElementById('loadingOverlay').style.display = 'none';
-      }, 1000);
-    }
-
-    window.onload = async function() {
-      showLoading('系統啟動中...');
-      try {
-        const res = await fetch(`${API_URL}?action=getClasses`);
-        const data = await res.json();
-        const sel = document.getElementById('classSelect');
-        sel.innerHTML = '';
-        data.classes.forEach(c => {
-          const opt = document.createElement('option');
-          opt.value = c; opt.textContent = c + ' 班';
-          sel.appendChild(opt);
-        });
-        await onClassChange();
-      } catch(e) {
-        showError('連線失敗');
+    /* 頂部靜默進度條動畫 */
+    function setProgress(percent) {
+      const bar = document.getElementById('topProgressBar');
+      if (percent > 0 && percent < 100) {
+        bar.style.opacity = '1';
+        bar.style.width = percent + '%';
+      } else if (percent >= 100) {
+        bar.style.width = '100%';
+        setTimeout(() => { bar.style.opacity = '0'; bar.style.width = '0%'; }, 350);
+      } else {
+        bar.style.opacity = '0';
+        bar.style.width = '0%';
       }
+    }
+
+    /* ⚡ 核心提速：啟動時優先讀取本機快取，0 秒立即顯示黃卡 */
+    window.onload = async function() {
+      const cachedClasses = localStorage.getItem('hw_classes');
+      const lastClass = localStorage.getItem('hw_last_class');
+
+      if (cachedClasses) {
+        try {
+          const classes = JSON.parse(cachedClasses);
+          renderClassOptions(classes, lastClass);
+          if (lastClass) {
+            const cachedData = localStorage.getItem('hw_cache_' + lastClass);
+            if (cachedData) {
+              applyDataToUI(JSON.parse(cachedData));
+            }
+          }
+        } catch(e) {}
+      }
+
+      // 背景靜默更新（完全不擋操作）
+      syncFromCloud();
       startCamera();
     };
 
-    async function onClassChange() {
+    function renderClassOptions(classes, selectedClass) {
+      const sel = document.getElementById('classSelect');
+      sel.innerHTML = '';
+      classes.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c; opt.textContent = c + ' 班';
+        if (c === selectedClass) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+
+    async function syncFromCloud() {
+      setProgress(30);
+      try {
+        const res = await fetch(`${API_URL}?action=getClasses`);
+        const data = await res.json();
+        localStorage.setItem('hw_classes', JSON.stringify(data.classes));
+        
+        let targetClass = document.getElementById('classSelect').value || data.classes[0];
+        renderClassOptions(data.classes, targetClass);
+
+        setProgress(65);
+        await onClassChange(true); // 靜默更新當前班級
+      } catch(e) {
+        document.getElementById('statusText').textContent = '⚠️ 離線使用中（已載入快取）';
+      }
+      setProgress(100);
+    }
+
+    /* 切換班級：先瞬時套用本地快取，再在背景同步最新進度 */
+    async function onClassChange(isSilent = false) {
       const c = document.getElementById('classSelect').value;
       if (!c) return;
+      localStorage.setItem('hw_last_class', c);
 
-      if (localCache[c]) {
-        applyDataToUI(localCache[c]);
-        return;
+      // 若本機有資料，0.01 秒瞬間鋪滿畫面
+      const localData = localStorage.getItem('hw_cache_' + c);
+      if (localData) {
+        applyDataToUI(JSON.parse(localData));
       }
 
-      showLoading(`載入 ${c} 班資料...`);
+      if (!isSilent) {
+        setProgress(40);
+        document.getElementById('statusText').textContent = `🔄 正在同步 ${c} 班最新資料...`;
+      }
+
       try {
         const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=`);
         const data = await res.json();
-        localCache[c] = data;
+        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
         applyDataToUI(data);
-        showSuccess('完成！');
+        setProgress(100);
       } catch(e) {
-        showError('換班失敗');
+        setProgress(100);
       }
     }
 
     function applyDataToUI(data) {
       const c = document.getElementById('classSelect').value;
-      currentStudents = data.students;
+      currentStudents = data.students || [];
 
       document.getElementById('hwInput').value = data.activeHw || '';
 
       const hSel = document.getElementById('historySelect');
       hSel.innerHTML = '<option value="">📂 翻歷史紀錄（歷次作業）...</option>';
-      data.assignments.forEach(a => {
+      (data.assignments || []).forEach(a => {
         const opt = document.createElement('option');
         opt.value = a; opt.textContent = '📄 ' + a;
         if (a === data.activeHw) opt.selected = true;
@@ -271,7 +279,7 @@
       const grid = document.getElementById('gridArea');
       grid.innerHTML = '';
       currentStudents.forEach(st => {
-        const val = data.currentRecords[st.seat] || '';
+        const val = (data.currentRecords && data.currentRecords[st.seat]) || '';
         const cell = document.createElement('div');
         cell.id = `seat-${st.seat}`;
         cell.className = 'seat-cell ' + getCellStatusClass(val);
@@ -280,7 +288,7 @@
         grid.appendChild(cell);
       });
 
-      document.getElementById('statusText').textContent = data.activeHw ? `已載入：${c} 班「${data.activeHw}」` : `請在上方輸入作業名稱並按【建立】`;
+      document.getElementById('statusText').textContent = data.activeHw ? `已載入：${c} 班「${data.activeHw}」` : `請輸入作業名稱並按【建立】`;
     }
 
     async function createOrLoadAssignment() {
@@ -290,15 +298,17 @@
         alert('請先輸入作業名稱！');
         return;
       }
-      showLoading(`載入「${hw}」...`);
+      setProgress(40);
+      document.getElementById('statusText').textContent = `正在建立「${hw}」...`;
       try {
         const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hw)}`);
         const data = await res.json();
-        localCache[c] = data;
+        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
         applyDataToUI(data);
-        showSuccess('建立成功！');
+        setProgress(100);
       } catch(e) {
-        showError('載入失敗');
+        setProgress(100);
+        alert('建立失敗，請檢查網路');
       }
     }
 
@@ -306,15 +316,16 @@
       if (!hwName) return;
       document.getElementById('hwInput').value = hwName;
       const c = document.getElementById('classSelect').value;
-      showLoading(`載入「${hwName}」...`);
+      setProgress(40);
+      document.getElementById('statusText').textContent = `載入「${hwName}」...`;
       try {
         const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hwName)}`);
         const data = await res.json();
-        localCache[c] = data;
+        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
         applyDataToUI(data);
-        showSuccess('載入完成！');
+        setProgress(100);
       } catch(e) {
-        showError('載入失敗');
+        setProgress(100);
       }
     }
 
@@ -325,7 +336,7 @@
       if (val === 'KEYIN') {
         document.getElementById('statusText').textContent = '⌨️ 手打模式：點擊座號格自訂分數';
       } else if (val === '退') {
-        document.getElementById('statusText').textContent = '🔴 退回模式：點擊座號標記退回（重複點擊取消）';
+        document.getElementById('statusText').textContent = '🔴 退回模式：點座號標記退回（再點一次取消）';
       } else if (val === '') {
         document.getElementById('statusText').textContent = '🧹 橡皮擦：點擊座號清空紀錄';
       } else {
@@ -333,7 +344,6 @@
       }
     }
 
-    // ⚡ 核心優化：點一下登記，再點一下取消（Toggle 機制）
     function handleCellClick(seatNo, studentName) {
       const hw = document.getElementById('hwInput').value.trim();
       if (!hw) {
@@ -351,13 +361,9 @@
         }
       } else {
         let nextVal = currentVal;
-        
-        // 若該格已經是當前模式的值，點擊自動取消變回空白
         if (currentCellVal === currentVal) {
           nextVal = '';
         }
-
-        // 登記高頻聲 (1400Hz)，取消低頻柔和聲 (880Hz)
         beep(nextVal ? 1400 : 880, 0.06);
         saveRecord(seatNo, studentName, nextVal);
       }
@@ -384,7 +390,7 @@
         reloadBtn.style.display = 'none';
         toggleBtn.textContent = '📷 開啟相機';
         toggleBtn.className = 'btn-cam-switch';
-        document.getElementById('statusText').textContent = '相機已關閉（大按鍵純手動模式）';
+        document.getElementById('statusText').textContent = '相機已關閉（手動模式）';
       } else {
         readerBox.style.display = 'block';
         reloadBtn.style.display = 'inline-block';
@@ -436,9 +442,12 @@
         cell.querySelector('.seat-val').textContent = val;
       }
       
-      if (localCache[c] && localCache[c].currentRecords) {
-        localCache[c].currentRecords[seatNo] = val;
-      }
+      // 更新本地快取
+      try {
+        const cache = JSON.parse(localStorage.getItem('hw_cache_' + c) || '{}');
+        if (cache.currentRecords) cache.currentRecords[seatNo] = val;
+        localStorage.setItem('hw_cache_' + c, JSON.stringify(cache));
+      } catch(e) {}
 
       const nameTag = studentName ? `（${studentName}）` : '';
       document.getElementById('statusText').textContent = val ? `✅ ${seatNo} 號 ${nameTag} 登記：${val}` : `⚪ ${seatNo} 號 ${nameTag} 取消登記`;
@@ -491,7 +500,7 @@
 
       if (!confirm(`確定要徹底刪除【${c} 班】的「${hw}」整欄紀錄嗎？（無法復原）`)) return;
 
-      showLoading(`正在刪除「${hw}」...`);
+      setProgress(40);
       try {
         const res = await fetch(API_URL, {
           method: 'POST',
@@ -499,15 +508,17 @@
         });
         const result = await res.json();
         if (result.success) {
-          delete localCache[c];
-          showSuccess('刪除成功！');
+          localStorage.removeItem('hw_cache_' + c);
           document.getElementById('hwInput').value = '';
+          setProgress(100);
           onClassChange();
         } else {
-          showError('刪除失敗：' + result.error);
+          setProgress(100);
+          alert('刪除失敗：' + result.error);
         }
       } catch(e) {
-        showError('連線失敗');
+        setProgress(100);
+        alert('連線失敗');
       }
     }
   </script>
