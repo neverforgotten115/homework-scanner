@@ -25,10 +25,11 @@
     .btn-create { background: #ca8a04; color: #fff; border: none; border-radius: 8px; padding: 0 14px; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
     .btn-danger { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 0 10px; font-weight: bold; cursor: pointer; }
 
-    .mode-bar { display: flex; gap: 6px; margin-bottom: 10px; }
+    /* 雙列功能按鈕 */
+    .mode-bar { display: flex; gap: 5px; margin-bottom: 6px; }
     .mode-btn {
-      flex: 1; padding: 10px 2px; border: 1.5px solid #ca8a04; background: #fff;
-      border-radius: 8px; font-weight: 800; font-size: 0.95rem; text-align: center; cursor: pointer; white-space: nowrap;
+      flex: 1; padding: 8px 2px; border: 1.5px solid #ca8a04; background: #fff;
+      border-radius: 8px; font-weight: 800; font-size: 0.88rem; text-align: center; cursor: pointer; white-space: nowrap;
     }
     .mode-btn.active { background: #eab308; color: #fff; }
     .mode-btn.reject { color: #dc2626; }
@@ -37,6 +38,12 @@
     .mode-btn.keyin.active { background: #2563eb; color: #fff; border-color: #1d4ed8; }
     .mode-btn.eraser { color: #64748b; }
     .mode-btn.eraser.active { background: #475569; color: #fff; border-color: #334155; }
+    
+    /* 第二列：免計黃燈與留人標記 */
+    .mode-btn.exempt { color: #854d0e; border-color: #eab308; background: #fef9c3; }
+    .mode-btn.exempt.active { background: #ca8a04; color: #fff; }
+    .mode-btn.detention-mode { color: #b91c1c; border-color: #ef4444; background: #fee2e2; }
+    .mode-btn.detention-mode.active { background: #b91c1c; color: #fff; }
 
     .cam-control-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .btn-cam-switch {
@@ -46,7 +53,6 @@
     .btn-cam-switch.on { background: #dc2626; }
     .btn-reload-cam { background: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 6px; padding: 7px 12px; font-size: 0.85rem; cursor: pointer; display: none; }
 
-    /* 預設隱藏相機黑框 */
     #reader-box { width: 100%; border-radius: 8px; overflow: hidden; background: #000; margin-bottom: 8px; display: none; }
     #reader { width: 100%; }
 
@@ -63,9 +69,10 @@
     }
     .btn-save-all:active { background: #15803d; transform: scale(0.98); }
 
-    .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    /* 5 格大按鍵矩陣 */
+    .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
     .seat-cell {
-      background: #fff; border: 2px solid #d97706; border-radius: 10px;
+      position: relative; background: #fff; border: 2px solid #d97706; border-radius: 10px;
       text-align: center; padding: 8px 2px; min-height: 68px; cursor: pointer;
       display: flex; flex-direction: column; justify-content: space-between; user-select: none;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -74,12 +81,42 @@
     .seat-num { font-size: 1.35rem; font-weight: 900; color: #451a03; line-height: 1.1; }
     .seat-val { font-size: 1.2rem; font-weight: 900; color: #b45309; min-height: 24px; line-height: 1.2; }
     
+    /* 格子色彩狀態 */
     .seat-cell.done { background: #dcfce7; border-color: #16a34a; }
     .seat-cell.done .seat-val { color: #15803d; }
     .seat-cell.late { background: #fed7aa; border-color: #ea580c; }
     .seat-cell.late .seat-val { color: #c2410c; }
     .seat-cell.reject { background: #fee2e2; border-color: #ef4444; }
     .seat-cell.reject .seat-val { color: #dc2626; }
+    /* 黃燈免計狀態 */
+    .seat-cell.exempt { background: #fef08a; border-color: #ca8a04; }
+    .seat-cell.exempt .seat-val { color: #854d0e; font-size: 1.05rem; }
+
+    /* 留人專屬角標 */
+    .badge-detention {
+      position: absolute; top: -4px; right: -4px; background: #ef4444; color: #fff;
+      font-size: 0.72rem; border-radius: 50%; width: 18px; height: 18px;
+      display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    /* 🚨 下課留下來專屬卡片 */
+    .detention-card {
+      background: #fff; border: 2px solid #ef4444; border-radius: 12px;
+      padding: 12px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.1);
+    }
+    .detention-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px; border-bottom: 1.5px dashed #fca5a5; padding-bottom: 6px;
+    }
+    .detention-title { font-weight: 900; color: #b91c1c; font-size: 1rem; display: flex; align-items: center; gap: 4px; }
+    .btn-clear-detention { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 0.8rem; color: #475569; cursor: pointer; }
+    .detention-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; align-items: center; }
+    .detention-chip {
+      background: #fee2e2; border: 1.5px solid #ef4444; color: #991b1b;
+      font-weight: 800; font-size: 0.9rem; padding: 4px 8px; border-radius: 8px;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .detention-empty { color: #94a3b8; font-size: 0.85rem; font-style: italic; }
   </style>
 </head>
 <body>
@@ -100,6 +137,7 @@
       <button class="btn-danger" onclick="deleteCurrentAssignment()">🗑️ 刪除</button>
     </div>
 
+    <!-- 第一列：常規作業登記 -->
     <div class="mode-bar">
       <div class="mode-btn active" onclick="setMode('✓', this)">打勾 ✓</div>
       <div class="mode-btn" onclick="setMode('補', this)">補交</div>
@@ -108,7 +146,15 @@
       <div class="mode-btn eraser" onclick="setMode('', this)">🧹 擦除</div>
     </div>
 
-    <!-- 相機按鈕預設為「開啟相機」 -->
+    <!-- 第二列：黃燈免計四項 ＋ 留人標記 -->
+    <div class="mode-bar">
+      <div class="mode-btn exempt" onclick="setMode('自學', this)">🟡 自學</div>
+      <div class="mode-btn exempt" onclick="setMode('資源', this)">🟡 資源</div>
+      <div class="mode-btn exempt" onclick="setMode('今假', this)">🟡 今假</div>
+      <div class="mode-btn exempt" onclick="setMode('前假', this)">🟡 前假</div>
+      <div class="mode-btn detention-mode" onclick="setMode('DETENTION', this)">🚨 留人</div>
+    </div>
+
     <div class="cam-control-bar">
       <button id="camToggleBtn" class="btn-cam-switch" onclick="toggleCamera()">📷 開啟相機</button>
       <button id="camReloadBtn" class="btn-reload-cam" onclick="startCamera()">🔄 重啟相機</button>
@@ -118,11 +164,23 @@
       <div id="reader"></div>
     </div>
     
-    <div id="statusText" class="feedback">準備就緒（純手動點選模式）</div>
+    <div id="statusText" class="feedback">準備就緒（手動點選模式）</div>
 
     <button class="btn-save-all" onclick="saveAndFinish()">💾 儲存並結算本班作業</button>
 
+    <!-- 1~50 號黃卡號碼格 -->
     <div class="grid-container" id="gridArea"></div>
+
+    <!-- 🚨 下課留下來專區 -->
+    <div class="detention-card">
+      <div class="detention-header">
+        <span class="detention-title">🚨 下課留下來名單 (<span id="detentionCount">0</span> 人)</span>
+        <button class="btn-clear-detention" onclick="clearAllDetention()">清空名單</button>
+      </div>
+      <div id="detentionList" class="detention-chips">
+        <span class="detention-empty">目前無登記留堂學生</span>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -131,9 +189,12 @@
     let currentVal = '✓';
     let currentStudents = [];
     let html5QrCode = null;
-    let isCameraRunning = false; // 預設關閉
+    let isCameraRunning = false;
     let lastScanCode = '';
     let lastScanTime = 0;
+
+    // 留人清單儲存（以座號數字為陣列）
+    let detentionList = [];
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
@@ -186,15 +247,12 @@
           renderClassOptions(classes, lastClass);
           if (lastClass) {
             const cachedData = localStorage.getItem('hw_cache_' + lastClass);
-            if (cachedData) {
-              applyDataToUI(JSON.parse(cachedData));
-            }
+            if (cachedData) applyDataToUI(JSON.parse(cachedData));
           }
         } catch(e) {}
       }
 
       syncFromCloud();
-      // 不再自動啟動相機
     };
 
     function renderClassOptions(classes, selectedClass) {
@@ -214,10 +272,8 @@
         const res = await fetch(`${API_URL}?action=getClasses`);
         const data = await res.json();
         localStorage.setItem('hw_classes', JSON.stringify(data.classes));
-        
         let targetClass = document.getElementById('classSelect').value || data.classes[0];
         renderClassOptions(data.classes, targetClass);
-
         setProgress(65);
         await onClassChange(true);
       } catch(e) {
@@ -231,10 +287,11 @@
       if (!c) return;
       localStorage.setItem('hw_last_class', c);
 
+      // 載入該班的留人清單
+      loadDetentionList();
+
       const localData = localStorage.getItem('hw_cache_' + c);
-      if (localData) {
-        applyDataToUI(JSON.parse(localData));
-      }
+      if (localData) applyDataToUI(JSON.parse(localData));
 
       if (!isSilent) {
         setProgress(40);
@@ -267,6 +324,8 @@
         hSel.appendChild(opt);
       });
 
+      loadDetentionList();
+
       const grid = document.getElementById('gridArea');
       grid.innerHTML = '';
       currentStudents.forEach(st => {
@@ -274,57 +333,39 @@
         const cell = document.createElement('div');
         cell.id = `seat-${st.seat}`;
         cell.className = 'seat-cell ' + getCellStatusClass(val);
-        cell.innerHTML = `<span class="seat-num">${st.seat}</span><span class="seat-val">${val}</span>`;
+        
+        // 渲染大座號、成績與留人紅標
+        cell.innerHTML = `
+          ${detentionList.includes(st.seat) ? '<span class="badge-detention">🚨</span>' : ''}
+          <span class="seat-num">${st.seat}</span>
+          <span class="seat-val">${val}</span>
+        `;
         cell.onclick = () => handleCellClick(st.seat, st.name);
         grid.appendChild(cell);
       });
 
+      renderDetentionCard();
       document.getElementById('statusText').textContent = data.activeHw ? `已載入：${c} 班「${data.activeHw}」` : `請輸入作業名稱並按【建立】`;
     }
 
-    async function createOrLoadAssignment() {
-      const hw = document.getElementById('hwInput').value.trim();
-      const c = document.getElementById('classSelect').value;
-      if (!hw) {
-        alert('請先輸入作業名稱！');
-        return;
-      }
-      setProgress(40);
-      document.getElementById('statusText').textContent = `正在建立「${hw}」...`;
-      try {
-        const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hw)}`);
-        const data = await res.json();
-        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
-        applyDataToUI(data);
-        setProgress(100);
-      } catch(e) {
-        setProgress(100);
-        alert('建立失敗，請檢查網路');
-      }
-    }
-
-    async function selectHistory(hwName) {
-      if (!hwName) return;
-      document.getElementById('hwInput').value = hwName;
-      const c = document.getElementById('classSelect').value;
-      setProgress(40);
-      document.getElementById('statusText').textContent = `載入「${hwName}」...`;
-      try {
-        const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hwName)}`);
-        const data = await res.json();
-        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
-        applyDataToUI(data);
-        setProgress(100);
-      } catch(e) {
-        setProgress(100);
-      }
+    function getCellStatusClass(val) {
+      if (!val) return '';
+      if (val === '補') return 'late';
+      if (val === '退' || val.includes('退') || val.includes('訂')) return 'reject';
+      if (['自學', '資源', '今假', '前假'].includes(val)) return 'exempt';
+      return 'done';
     }
 
     function setMode(val, elem) {
       currentVal = val;
       document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
       elem.classList.add('active');
-      if (val === 'KEYIN') {
+
+      if (val === 'DETENTION') {
+        document.getElementById('statusText').textContent = '🚨 留人模式：點座號直接加入/退出下課留人名單';
+      } else if (['自學', '資源', '今假', '前假'].includes(val)) {
+        document.getElementById('statusText').textContent = `🟡 免計模式【${val}】：登記後不計入缺交名冊`;
+      } else if (val === 'KEYIN') {
         document.getElementById('statusText').textContent = '⌨️ 手打模式：點擊座號格自訂分數';
       } else if (val === '退') {
         document.getElementById('statusText').textContent = '🔴 退回模式：點座號標記退回（再點取消）';
@@ -336,6 +377,12 @@
     }
 
     function handleCellClick(seatNo, studentName) {
+      // 🚨 若為留人模式：獨立切換留人名冊，完全不更動登記分數
+      if (currentVal === 'DETENTION') {
+        toggleDetention(seatNo, studentName);
+        return;
+      }
+
       const hw = document.getElementById('hwInput').value.trim();
       if (!hw) {
         alert('請先輸入作業名稱並按【建立】！');
@@ -352,76 +399,85 @@
         }
       } else {
         let nextVal = currentVal;
-        if (currentCellVal === currentVal) {
-          nextVal = '';
-        }
+        if (currentCellVal === currentVal) nextVal = '';
         beep(nextVal ? 1400 : 880, 0.06);
         saveRecord(seatNo, studentName, nextVal);
       }
     }
 
-    function getCellStatusClass(val) {
-      if (!val) return '';
-      if (val === '補') return 'late';
-      if (val === '退' || val.includes('退') || val.includes('訂')) return 'reject';
-      return 'done';
-    }
-
-    // 相機開關切換
-    async function toggleCamera() {
-      const toggleBtn = document.getElementById('camToggleBtn');
-      const readerBox = document.getElementById('reader-box');
-      const reloadBtn = document.getElementById('camReloadBtn');
-
-      if (isCameraRunning) {
-        if (html5QrCode) {
-          try { await html5QrCode.stop(); } catch(e){}
-        }
-        isCameraRunning = false;
-        readerBox.style.display = 'none';
-        reloadBtn.style.display = 'none';
-        toggleBtn.textContent = '📷 開啟相機';
-        toggleBtn.className = 'btn-cam-switch';
-        document.getElementById('statusText').textContent = '相機已關閉（手動點選模式）';
+    /* 留人專屬邏輯 */
+    function toggleDetention(seatNo, studentName) {
+      const idx = detentionList.indexOf(seatNo);
+      if (idx > -1) {
+        detentionList.splice(idx, 1);
+        beep(700, 0.08);
+        document.getElementById('statusText').textContent = `⚪ ${seatNo} 號（${studentName}）已自留人名單移除`;
       } else {
-        readerBox.style.display = 'block';
-        reloadBtn.style.display = 'inline-block';
-        toggleBtn.textContent = '📷 關閉相機';
-        toggleBtn.className = 'btn-cam-switch on';
-        startCamera();
+        detentionList.push(seatNo);
+        detentionList.sort((a,b) => a - b);
+        beep(1200, 0.12);
+        document.getElementById('statusText').textContent = `🚨 ${seatNo} 號（${studentName}）已加入下課留下來名單！`;
+      }
+      saveDetentionList();
+      updateCellBadge(seatNo);
+      renderDetentionCard();
+    }
+
+    function updateCellBadge(seatNo) {
+      const cell = document.getElementById(`seat-${seatNo}`);
+      if (!cell) return;
+      let badge = cell.querySelector('.badge-detention');
+      if (detentionList.includes(seatNo)) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'badge-detention';
+          badge.textContent = '🚨';
+          cell.appendChild(badge);
+        }
+      } else {
+        if (badge) badge.remove();
       }
     }
 
-    function startCamera() {
-      if (html5QrCode) {
-        try { html5QrCode.stop().catch(()=>{}); } catch(e){}
+    function renderDetentionCard() {
+      const container = document.getElementById('detentionList');
+      document.getElementById('detentionCount').textContent = detentionList.length;
+      if (detentionList.length === 0) {
+        container.innerHTML = '<span class="detention-empty">目前無登記留堂學生</span>';
+        return;
       }
-      html5QrCode = new Html5Qrcode("reader");
-      const config = { fps: 6, qrbox: { width: 200, height: 200 }, aspectRatio: 1.0 };
-      
-      html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-        const now = Date.now();
-        if (decodedText === lastScanCode && (now - lastScanTime) < 2200) return;
-        lastScanCode = decodedText;
-        lastScanTime = now;
-
-        const parts = decodedText.split('-');
-        const seat = parseInt(parts[1] || parts[0]);
-        if (!isNaN(seat)) {
-          if (navigator.vibrate) navigator.vibrate(60);
-          beep(1400);
-          const st = currentStudents.find(s => s.seat === seat);
-          const sName = st ? st.name : '';
-          saveRecord(seat, sName, currentVal === 'KEYIN' ? '✓' : currentVal);
-        }
-      }).then(() => {
-        isCameraRunning = true;
-        document.getElementById('camToggleBtn').textContent = '📷 關閉相機';
-        document.getElementById('camToggleBtn').className = 'btn-cam-switch on';
-      }).catch(err => {
-        isCameraRunning = false;
-        document.getElementById('statusText').textContent = '相機未啟動（純手動點選模式）';
+      container.innerHTML = '';
+      detentionList.forEach(seat => {
+        const st = currentStudents.find(s => s.seat === seat);
+        const name = st ? st.name : '';
+        const chip = document.createElement('span');
+        chip.className = 'detention-chip';
+        chip.innerHTML = `${seat}號 ${name} ✕`;
+        chip.onclick = () => toggleDetention(seat, name);
+        container.appendChild(chip);
       });
+    }
+
+    function saveDetentionList() {
+      const c = document.getElementById('classSelect').value;
+      const hw = document.getElementById('hwInput').value.trim();
+      localStorage.setItem(`hw_detention_${c}_${hw}`, JSON.stringify(detentionList));
+    }
+
+    function loadDetentionList() {
+      const c = document.getElementById('classSelect').value;
+      const hw = document.getElementById('hwInput').value.trim();
+      const saved = localStorage.getItem(`hw_detention_${c}_${hw}`);
+      detentionList = saved ? JSON.parse(saved) : [];
+    }
+
+    function clearAllDetention() {
+      if (detentionList.length === 0) return;
+      if (!confirm('確定要清空本次下課留下來名單嗎？')) return;
+      detentionList = [];
+      saveDetentionList();
+      currentStudents.forEach(st => updateCellBadge(st.seat));
+      renderDetentionCard();
     }
 
     async function saveRecord(seatNo, studentName, val) {
@@ -449,18 +505,23 @@
       });
     }
 
+    /* 結算統計：將黃燈自動剔除缺交，並統計留校名單 */
     function saveAndFinish() {
       const c = document.getElementById('classSelect').value;
       const hw = document.getElementById('hwInput').value.trim();
       let submittedCount = 0;
       let missingSeats = [];
       let rejectSeats = [];
+      let exemptList = [];
 
       currentStudents.forEach(st => {
         const cell = document.getElementById(`seat-${st.seat}`);
         const val = cell ? cell.querySelector('.seat-val').textContent.trim() : '';
+        
         if (!val) {
           missingSeats.push(st.seat);
+        } else if (['自學', '資源', '今假', '前假'].includes(val)) {
+          exemptList.push(`${st.seat}號(${val})`);
         } else {
           submittedCount++;
           if (val === '退' || val.includes('退') || val.includes('訂')) {
@@ -472,34 +533,120 @@
       if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
       playSuccessChime();
 
-      let summaryText = `💾【${c} 班 - ${hw || '未命名作業'}】\n紀錄已完整儲存至雲端！\n\n應收：${currentStudents.length} 人\n已收：${submittedCount} 人`;
+      let summaryText = `💾【${c} 班 - ${hw || '未命名作業'}】\n紀錄已完整儲存至雲端！\n\n應收：${currentStudents.length} 人\n實收：${submittedCount} 人`;
+      
+      if (exemptList.length > 0) {
+        summaryText += `\n🟡 免計/請假 (${exemptList.length}人)：${exemptList.join(', ')}`;
+      }
+
       if (missingSeats.length > 0) {
         summaryText += `\n❌ 缺交座號 (${missingSeats.length}人)：${missingSeats.join(', ')}`;
       } else {
-        summaryText += '\n🎉 全班繳齊！';
+        summaryText += '\n🎉 全班無缺交！';
       }
+
       if (rejectSeats.length > 0) {
         summaryText += `\n🔴 退回待訂正 (${rejectSeats.length}人)：${rejectSeats.join(', ')}`;
       }
+
+      if (detentionList.length > 0) {
+        summaryText += `\n\n🚨 下課留下輔導 (${detentionList.length}人)：${detentionList.join(', ')} 號`;
+      }
+
       alert(summaryText);
+    }
+
+    async function createOrLoadAssignment() {
+      const hw = document.getElementById('hwInput').value.trim();
+      const c = document.getElementById('classSelect').value;
+      if (!hw) { alert('請先輸入作業名稱！'); return; }
+      setProgress(40);
+      document.getElementById('statusText').textContent = `正在建立「${hw}」...`;
+      try {
+        const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hw)}`);
+        const data = await res.json();
+        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
+        applyDataToUI(data);
+        setProgress(100);
+      } catch(e) { setProgress(100); alert('建立失敗，請檢查網路'); }
+    }
+
+    async function selectHistory(hwName) {
+      if (!hwName) return;
+      document.getElementById('hwInput').value = hwName;
+      const c = document.getElementById('classSelect').value;
+      setProgress(40);
+      document.getElementById('statusText').textContent = `載入「${hwName}」...`;
+      try {
+        const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hwName)}`);
+        const data = await res.json();
+        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
+        applyDataToUI(data);
+        setProgress(100);
+      } catch(e) { setProgress(100); }
+    }
+
+    async function toggleCamera() {
+      const toggleBtn = document.getElementById('camToggleBtn');
+      const readerBox = document.getElementById('reader-box');
+      const reloadBtn = document.getElementById('camReloadBtn');
+      if (isCameraRunning) {
+        if (html5QrCode) { try { await html5QrCode.stop(); } catch(e){} }
+        isCameraRunning = false;
+        readerBox.style.display = 'none';
+        reloadBtn.style.display = 'none';
+        toggleBtn.textContent = '📷 開啟相機';
+        toggleBtn.className = 'btn-cam-switch';
+        document.getElementById('statusText').textContent = '相機已關閉（手動模式）';
+      } else {
+        readerBox.style.display = 'block';
+        reloadBtn.style.display = 'inline-block';
+        toggleBtn.textContent = '📷 關閉相機';
+        toggleBtn.className = 'btn-cam-switch on';
+        startCamera();
+      }
+    }
+
+    function startCamera() {
+      if (html5QrCode) { try { html5QrCode.stop().catch(()=>{}); } catch(e){} }
+      html5QrCode = new Html5Qrcode("reader");
+      const config = { fps: 6, qrbox: { width: 200, height: 200 }, aspectRatio: 1.0 };
+      html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+        const now = Date.now();
+        if (decodedText === lastScanCode && (now - lastScanTime) < 2200) return;
+        lastScanCode = decodedText;
+        lastScanTime = now;
+        const parts = decodedText.split('-');
+        const seat = parseInt(parts[1] || parts[0]);
+        if (!isNaN(seat)) {
+          if (navigator.vibrate) navigator.vibrate(60);
+          beep(1400);
+          const st = currentStudents.find(s => s.seat === seat);
+          const sName = st ? st.name : '';
+          saveRecord(seat, sName, currentVal === 'KEYIN' ? '✓' : currentVal);
+        }
+      }).then(() => {
+        isCameraRunning = true;
+        document.getElementById('camToggleBtn').textContent = '📷 關閉相機';
+        document.getElementById('camToggleBtn').className = 'btn-cam-switch on';
+      }).catch(err => {
+        isCameraRunning = false;
+        document.getElementById('statusText').textContent = '相機未啟動（手動模式）';
+      });
     }
 
     async function deleteCurrentAssignment() {
       const c = document.getElementById('classSelect').value;
       const hw = document.getElementById('hwInput').value.trim();
       if (!hw) return;
-
       if (!confirm(`確定要徹底刪除【${c} 班】的「${hw}」整欄紀錄嗎？（無法復原）`)) return;
-
       setProgress(40);
       try {
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          body: JSON.stringify({ action: 'deleteAssignment', classId: c, assignment: hw })
-        });
+        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteAssignment', classId: c, assignment: hw }) });
         const result = await res.json();
         if (result.success) {
           localStorage.removeItem('hw_cache_' + c);
+          localStorage.removeItem(`hw_detention_${c}_${hw}`);
           document.getElementById('hwInput').value = '';
           setProgress(100);
           onClassChange();
@@ -507,10 +654,7 @@
           setProgress(100);
           alert('刪除失敗：' + result.error);
         }
-      } catch(e) {
-        setProgress(100);
-        alert('連線失敗');
-      }
+      } catch(e) { setProgress(100); alert('連線失敗'); }
     }
   </script>
 </body>
