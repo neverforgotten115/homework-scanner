@@ -41,6 +41,8 @@
     
     .mode-btn.exempt { color: #854d0e; border-color: #eab308; background: #fef9c3; }
     .mode-btn.exempt.active { background: #ca8a04; color: #fff; }
+    .mode-btn.detention-mode { color: #b91c1c; border-color: #ef4444; background: #fee2e2; }
+    .mode-btn.detention-mode.active { background: #b91c1c; color: #fff; border-color: #991b1b; }
 
     .cam-control-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .btn-cam-switch {
@@ -136,6 +138,7 @@
       <button class="btn-danger" onclick="deleteCurrentAssignment()">🗑️ 刪除</button>
     </div>
 
+    <!-- 第一列：作業批改 -->
     <div class="mode-bar">
       <div class="mode-btn active" onclick="setMode('✓', this)">打勾 ✓</div>
       <div class="mode-btn" onclick="setMode('補', this)">補交</div>
@@ -144,11 +147,13 @@
       <div class="mode-btn eraser" onclick="setMode('', this)">🧹 擦除</div>
     </div>
 
+    <!-- 第二列：黃燈免計 ＋ 留人按鈕 -->
     <div class="mode-bar">
       <div class="mode-btn exempt" onclick="setMode('自學', this)">🟡 自學</div>
       <div class="mode-btn exempt" onclick="setMode('資源', this)">🟡 資源</div>
       <div class="mode-btn exempt" onclick="setMode('今假', this)">🟡 今假</div>
       <div class="mode-btn exempt" onclick="setMode('前假', this)">🟡 前假</div>
+      <div class="mode-btn detention-mode" onclick="setMode('DETENTION', this)">🚨 留人</div>
     </div>
 
     <div class="cam-control-bar">
@@ -160,19 +165,20 @@
       <div id="reader"></div>
     </div>
     
-    <div id="statusText" class="feedback">💡 提示：短按登記/取消，長按切換🚨留人</div>
+    <div id="statusText" class="feedback">💡 提示：短按登記/取消，亦可長按切換🚨留人</div>
 
     <button class="btn-save-all" onclick="saveAndFinish()">💾 儲存並結算本班作業</button>
 
     <div class="grid-container" id="gridArea"></div>
 
+    <!-- 🚨 下課留下來專區 -->
     <div class="detention-card">
       <div class="detention-header">
         <span class="detention-title">🚨 下課留下來名單 (<span id="detentionCount">0</span> 人)</span>
         <button class="btn-clear-detention" onclick="clearAllDetention()">清空名單</button>
       </div>
       <div id="detentionList" class="detention-chips">
-        <span class="detention-empty">目前無留堂學生（長按座號即可加入）</span>
+        <span class="detention-empty">目前無留堂學生（點選留人模式或長按座號加入）</span>
       </div>
     </div>
   </div>
@@ -326,10 +332,8 @@
         cell.id = `seat-${st.seat}`;
         cell.className = 'seat-cell ' + getCellStatusClass(val);
         
-        // ⚡ 1. 原生游標懸停提示文字 (Tooltip)
         cell.title = `${st.seat} 號 ${st.name}`;
 
-        // ⚡ 2. 滑鼠移入即時連動中央大字狀態列
         cell.addEventListener('mouseenter', () => {
           document.getElementById('statusText').textContent = `👤 ${st.seat} 號 ${st.name}`;
         });
@@ -404,7 +408,9 @@
       document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
       elem.classList.add('active');
 
-      if (['自學', '資源', '今假', '前假'].includes(val)) {
+      if (val === 'DETENTION') {
+        document.getElementById('statusText').textContent = '🚨 留人模式：點座號直接釘上/拔除留人標記';
+      } else if (['自學', '資源', '今假', '前假'].includes(val)) {
         document.getElementById('statusText').textContent = `🟡 免計模式【${val}】：登記後不計入缺交名單`;
       } else if (val === 'KEYIN') {
         document.getElementById('statusText').textContent = '⌨️ 手打模式：點擊座號格自訂分數';
@@ -418,6 +424,12 @@
     }
 
     function handleCellClick(seatNo, studentName) {
+      // 若當前模式為「🚨 留人」，短按即切換留人狀態
+      if (currentVal === 'DETENTION') {
+        toggleDetention(seatNo, studentName);
+        return;
+      }
+
       const hw = document.getElementById('hwInput').value.trim();
       if (!hw) {
         alert('請先輸入作業名稱並按【建立】！');
@@ -483,7 +495,7 @@
       const container = document.getElementById('detentionList');
       document.getElementById('detentionCount').textContent = detentionList.length;
       if (detentionList.length === 0) {
-        container.innerHTML = '<span class="detention-empty">目前無留堂學生（長按號碼格即可釘上）</span>';
+        container.innerHTML = '<span class="detention-empty">目前無留堂學生（點選留人模式或長按座號加入）</span>';
         return;
       }
       container.innerHTML = '';
@@ -662,7 +674,11 @@
           beep(1400);
           const st = currentStudents.find(s => s.seat === seat);
           const sName = st ? st.name : '';
-          saveRecord(seat, sName, currentVal === 'KEYIN' ? '✓' : currentVal);
+          if (currentVal === 'DETENTION') {
+            toggleDetention(seat, sName);
+          } else {
+            saveRecord(seat, sName, currentVal === 'KEYIN' ? '✓' : currentVal);
+          }
         }
       }).then(() => {
         isCameraRunning = true;
