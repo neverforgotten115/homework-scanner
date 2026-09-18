@@ -171,7 +171,6 @@
 
     <div class="grid-container" id="gridArea"></div>
 
-    <!-- 🚨 下課留下來專區 -->
     <div class="detention-card">
       <div class="detention-header">
         <span class="detention-title">🚨 下課留下來名單 (<span id="detentionCount">0</span> 人)</span>
@@ -194,6 +193,11 @@
     let lastScanTime = 0;
 
     let detentionList = [];
+
+    // ⚡ 雙重防抖與觸控鎖定
+    let isTouchActive = false;
+    let lastActionTime = 0;
+    let lastActionSeat = null;
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
@@ -331,7 +335,6 @@
         const cell = document.createElement('div');
         cell.id = `seat-${st.seat}`;
         cell.className = 'seat-cell ' + getCellStatusClass(val);
-        
         cell.title = `${st.seat} 號 ${st.name}`;
 
         cell.addEventListener('mouseenter', () => {
@@ -343,7 +346,7 @@
         });
 
         cell.innerHTML = `
-          ${detentionList.includes(st.seat) ? `<span class="badge-detention" onclick="event.stopPropagation(); toggleDetention(${st.seat}, '${st.name}')">🚨</span>` : ''}
+          ${detentionList.includes(st.seat) ? `<span class="badge-detention" id="badge-${st.seat}">🚨</span>` : ''}
           <span class="seat-num">${st.seat}</span>
           <span class="seat-val">${val}</span>
         `;
@@ -356,42 +359,69 @@
       document.getElementById('statusText').textContent = data.activeHw ? `已載入：${c} 班「${data.activeHw}」` : `請輸入作業名稱並按【建立】`;
     }
 
+    // ⚡ 核心防抖點擊：350ms 內絕對禁止對同一個座號連續觸發
+    function safeCellClick(seatNo, studentName) {
+      const now = Date.now();
+      if (lastActionSeat === seatNo && (now - lastActionTime) < 350) {
+        return;
+      }
+      lastActionTime = now;
+      lastActionSeat = seatNo;
+      handleCellClick(seatNo, studentName);
+    }
+
+    // ⚡ 徹底隔離觸控與滑鼠事件，徹底杜絕 iPhone 幽靈點擊
     function attachCellEvents(cell, seatNo, studentName) {
       let pressTimer = null;
       let isLongPress = false;
 
-      function startPress(e) {
+      function startPress() {
         isLongPress = false;
         pressTimer = setTimeout(() => {
           isLongPress = true;
           toggleDetention(seatNo, studentName);
-        }, 480);
+        }, 450);
       }
 
-      function cancelPress(e) {
+      function cancelPress() {
         if (pressTimer) {
           clearTimeout(pressTimer);
           pressTimer = null;
         }
       }
 
-      cell.addEventListener('touchstart', startPress, { passive: true });
+      // 手機觸控事件
+      cell.addEventListener('touchstart', (e) => {
+        isTouchActive = true;
+        startPress();
+      }, { passive: true });
+
       cell.addEventListener('touchend', (e) => {
-        cancelPress(e);
+        cancelPress();
         if (!isLongPress) {
-          handleCellClick(seatNo, studentName);
+          safeCellClick(seatNo, studentName);
         }
+        // 延遲解除觸控標記，阻斷隨後跟進的模擬 mouseup
+        setTimeout(() => { isTouchActive = false; }, 500);
       });
+
       cell.addEventListener('touchmove', cancelPress);
       cell.addEventListener('touchcancel', cancelPress);
 
-      cell.addEventListener('mousedown', startPress);
+      // 電腦滑鼠專用事件（觸控模式下自動忽略）
+      cell.addEventListener('mousedown', (e) => {
+        if (isTouchActive) return;
+        startPress();
+      });
+
       cell.addEventListener('mouseup', (e) => {
-        cancelPress(e);
+        if (isTouchActive) return;
+        cancelPress();
         if (!isLongPress) {
-          handleCellClick(seatNo, studentName);
+          safeCellClick(seatNo, studentName);
         }
       });
+
       cell.addEventListener('mouseleave', cancelPress);
     }
 
@@ -424,7 +454,6 @@
     }
 
     function handleCellClick(seatNo, studentName) {
-      // 若當前模式為「🚨 留人」，短按即切換留人狀態
       if (currentVal === 'DETENTION') {
         toggleDetention(seatNo, studentName);
         return;
@@ -446,7 +475,13 @@
         }
       } else {
         let nextVal = currentVal;
-        if (currentCellVal === currentVal) nextVal = '';
+        
+        // ⚡ 開關邏輯：只有當「格子內容 完全等於 當前選擇的模式」時，才觸發取消還原空白
+        // 若原本是「資源」而現在選「✓」，則直接覆蓋為「✓」
+        if (currentCellVal === currentVal) {
+          nextVal = '';
+        }
+        
         beep(nextVal ? 1400 : 880, 0.06);
         saveRecord(seatNo, studentName, nextVal);
       }
@@ -481,6 +516,10 @@
           badge.className = 'badge-detention';
           badge.textContent = '🚨';
           badge.onclick = (e) => {
+            e.stopPropagation();
+            toggleDetention(seatNo, studentName);
+          };
+          badge.ontouchend = (e) => {
             e.stopPropagation();
             toggleDetention(seatNo, studentName);
           };
