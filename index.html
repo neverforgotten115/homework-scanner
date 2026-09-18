@@ -23,9 +23,10 @@
     select, input { padding: 9px 10px; border: 1.5px solid #d97706; border-radius: 8px; font-size: 1rem; background: #fff; outline: none; }
     
     .btn-create { background: #ca8a04; color: #fff; border: none; border-radius: 8px; padding: 0 14px; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
+    .btn-create:active { transform: scale(0.96); background: #b45309; }
     .btn-danger { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 0 10px; font-weight: bold; cursor: pointer; }
 
-    /* 模式選擇列 */
+    /* 模式列 */
     .mode-bar { display: flex; gap: 5px; margin-bottom: 6px; }
     .mode-btn {
       flex: 1; padding: 8px 2px; border: 1.5px solid #ca8a04; background: #fff;
@@ -194,7 +195,7 @@
 
     let detentionList = [];
 
-    // ⚡ 雙重防抖與觸控鎖定
+    // 觸控與滑鼠防抖防衝突機制
     let isTouchActive = false;
     let lastActionTime = 0;
     let lastActionSeat = null;
@@ -255,6 +256,7 @@
         } catch(e) {}
       }
 
+      // 背景即時與 Google 試算表強制同步最新資料
       syncFromCloud();
     };
 
@@ -290,14 +292,12 @@
       if (!c) return;
       localStorage.setItem('hw_last_class', c);
 
-      loadDetentionList();
-
       const localData = localStorage.getItem('hw_cache_' + c);
       if (localData) applyDataToUI(JSON.parse(localData));
 
       if (!isSilent) {
         setProgress(40);
-        document.getElementById('statusText').textContent = `🔄 正在同步 ${c} 班最新資料...`;
+        document.getElementById('statusText').textContent = `🔄 正在連線 Google 同步 ${c} 班...`;
       }
 
       try {
@@ -326,7 +326,8 @@
         hSel.appendChild(opt);
       });
 
-      loadDetentionList();
+      // 雲端同步留人清單
+      detentionList = data.detentionList || [];
 
       const grid = document.getElementById('gridArea');
       grid.innerHTML = '';
@@ -356,21 +357,58 @@
       });
 
       renderDetentionCard();
-      document.getElementById('statusText').textContent = data.activeHw ? `已載入：${c} 班「${data.activeHw}」` : `請輸入作業名稱並按【建立】`;
+      document.getElementById('statusText').textContent = data.activeHw ? `已載入：${c} 班「${data.activeHw}」` : `請在上方輸入作業名稱並按【建立】`;
     }
 
-    // ⚡ 核心防抖點擊：350ms 內絕對禁止對同一個座號連續觸發
-    function safeCellClick(seatNo, studentName) {
-      const now = Date.now();
-      if (lastActionSeat === seatNo && (now - lastActionTime) < 350) {
+    // ⚡ 核心修復：發送 createAssignment 建立實體欄位
+    async function createOrLoadAssignment() {
+      const hw = document.getElementById('hwInput').value.trim();
+      const c = document.getElementById('classSelect').value;
+      if (!hw) {
+        alert('請先在左邊欄位輸入作業名稱！');
         return;
       }
+      setProgress(40);
+      document.getElementById('statusText').textContent = `正在建立「${hw}」...`;
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'createAssignment', classId: c, assignment: hw })
+        });
+        const data = await res.json();
+        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
+        applyDataToUI(data);
+        setProgress(100);
+        document.getElementById('statusText').textContent = `✅ 成功建立並載入「${hw}」！`;
+      } catch(e) {
+        setProgress(100);
+        alert('建立失敗，請檢查網路連線');
+      }
+    }
+
+    async function selectHistory(hwName) {
+      if (!hwName) return;
+      document.getElementById('hwInput').value = hwName;
+      const c = document.getElementById('classSelect').value;
+      setProgress(40);
+      document.getElementById('statusText').textContent = `載入「${hwName}」...`;
+      try {
+        const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hwName)}`);
+        const data = await res.json();
+        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
+        applyDataToUI(data);
+        setProgress(100);
+      } catch(e) { setProgress(100); }
+    }
+
+    function safeCellClick(seatNo, studentName) {
+      const now = Date.now();
+      if (lastActionSeat === seatNo && (now - lastActionTime) < 320) return;
       lastActionTime = now;
       lastActionSeat = seatNo;
       handleCellClick(seatNo, studentName);
     }
 
-    // ⚡ 徹底隔離觸控與滑鼠事件，徹底杜絕 iPhone 幽靈點擊
     function attachCellEvents(cell, seatNo, studentName) {
       let pressTimer = null;
       let isLongPress = false;
@@ -390,7 +428,6 @@
         }
       }
 
-      // 手機觸控事件
       cell.addEventListener('touchstart', (e) => {
         isTouchActive = true;
         startPress();
@@ -401,14 +438,12 @@
         if (!isLongPress) {
           safeCellClick(seatNo, studentName);
         }
-        // 延遲解除觸控標記，阻斷隨後跟進的模擬 mouseup
-        setTimeout(() => { isTouchActive = false; }, 500);
+        setTimeout(() => { isTouchActive = false; }, 400);
       });
 
       cell.addEventListener('touchmove', cancelPress);
       cell.addEventListener('touchcancel', cancelPress);
 
-      // 電腦滑鼠專用事件（觸控模式下自動忽略）
       cell.addEventListener('mousedown', (e) => {
         if (isTouchActive) return;
         startPress();
@@ -475,18 +510,13 @@
         }
       } else {
         let nextVal = currentVal;
-        
-        // ⚡ 開關邏輯：只有當「格子內容 完全等於 當前選擇的模式」時，才觸發取消還原空白
-        // 若原本是「資源」而現在選「✓」，則直接覆蓋為「✓」
-        if (currentCellVal === currentVal) {
-          nextVal = '';
-        }
-        
+        if (currentCellVal === currentVal) nextVal = ''; // 只有完全相同時才取消還原
         beep(nextVal ? 1400 : 880, 0.06);
         saveRecord(seatNo, studentName, nextVal);
       }
     }
 
+    // ⚡ 雲端同步留人切換
     function toggleDetention(seatNo, studentName) {
       const idx = detentionList.indexOf(seatNo);
       if (idx > -1) {
@@ -501,9 +531,19 @@
         beep(1200, 0.12);
         document.getElementById('statusText').textContent = `🚨 ${seatNo} 號（${studentName}）已釘上留下來名單！`;
       }
-      saveDetentionList();
+      
       updateCellBadge(seatNo, studentName);
       renderDetentionCard();
+      syncDetentionToCloud();
+    }
+
+    function syncDetentionToCloud() {
+      const c = document.getElementById('classSelect').value;
+      const hw = document.getElementById('hwInput').value.trim();
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'saveDetention', classId: c, assignment: hw, detentionList: detentionList })
+      });
     }
 
     function updateCellBadge(seatNo, studentName) {
@@ -515,14 +555,8 @@
           badge = document.createElement('span');
           badge.className = 'badge-detention';
           badge.textContent = '🚨';
-          badge.onclick = (e) => {
-            e.stopPropagation();
-            toggleDetention(seatNo, studentName);
-          };
-          badge.ontouchend = (e) => {
-            e.stopPropagation();
-            toggleDetention(seatNo, studentName);
-          };
+          badge.onclick = (e) => { e.stopPropagation(); toggleDetention(seatNo, studentName); };
+          badge.ontouchend = (e) => { e.stopPropagation(); toggleDetention(seatNo, studentName); };
           cell.appendChild(badge);
         }
       } else {
@@ -549,26 +583,13 @@
       });
     }
 
-    function saveDetentionList() {
-      const c = document.getElementById('classSelect').value;
-      const hw = document.getElementById('hwInput').value.trim();
-      localStorage.setItem(`hw_detention_${c}_${hw}`, JSON.stringify(detentionList));
-    }
-
-    function loadDetentionList() {
-      const c = document.getElementById('classSelect').value;
-      const hw = document.getElementById('hwInput').value.trim();
-      const saved = localStorage.getItem(`hw_detention_${c}_${hw}`);
-      detentionList = saved ? JSON.parse(saved) : [];
-    }
-
     function clearAllDetention() {
       if (detentionList.length === 0) return;
       if (!confirm('確定要清空本次留人名單嗎？')) return;
       detentionList = [];
-      saveDetentionList();
       currentStudents.forEach(st => updateCellBadge(st.seat, st.name));
       renderDetentionCard();
+      syncDetentionToCloud();
     }
 
     async function saveRecord(seatNo, studentName, val) {
@@ -646,36 +667,6 @@
       alert(summaryText);
     }
 
-    async function createOrLoadAssignment() {
-      const hw = document.getElementById('hwInput').value.trim();
-      const c = document.getElementById('classSelect').value;
-      if (!hw) { alert('請先輸入作業名稱！'); return; }
-      setProgress(40);
-      document.getElementById('statusText').textContent = `正在建立「${hw}」...`;
-      try {
-        const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hw)}`);
-        const data = await res.json();
-        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
-        applyDataToUI(data);
-        setProgress(100);
-      } catch(e) { setProgress(100); alert('建立失敗，請檢查網路'); }
-    }
-
-    async function selectHistory(hwName) {
-      if (!hwName) return;
-      document.getElementById('hwInput').value = hwName;
-      const c = document.getElementById('classSelect').value;
-      setProgress(40);
-      document.getElementById('statusText').textContent = `載入「${hwName}」...`;
-      try {
-        const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hwName)}`);
-        const data = await res.json();
-        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
-        applyDataToUI(data);
-        setProgress(100);
-      } catch(e) { setProgress(100); }
-    }
-
     async function toggleCamera() {
       const toggleBtn = document.getElementById('camToggleBtn');
       const readerBox = document.getElementById('reader-box');
@@ -740,7 +731,6 @@
         const result = await res.json();
         if (result.success) {
           localStorage.removeItem('hw_cache_' + c);
-          localStorage.removeItem(`hw_detention_${c}_${hw}`);
           document.getElementById('hwInput').value = '';
           setProgress(100);
           onClassChange();
