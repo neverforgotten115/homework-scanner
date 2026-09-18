@@ -24,6 +24,11 @@
     
     .btn-create { background: #ca8a04; color: #fff; border: none; border-radius: 8px; padding: 0 14px; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
     .btn-create:active { transform: scale(0.96); background: #b45309; }
+    
+    /* 🔄 刷新按鈕 */
+    .btn-refresh { background: #0284c7; color: #fff; border: none; border-radius: 8px; padding: 0 10px; font-weight: bold; font-size: 0.9rem; cursor: pointer; white-space: nowrap; }
+    .btn-refresh:active { transform: scale(0.96); background: #0369a1; }
+    
     .btn-danger { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 0 10px; font-weight: bold; cursor: pointer; }
 
     /* 模式列 */
@@ -132,10 +137,12 @@
       <button class="btn-create" onclick="createOrLoadAssignment()">建立</button>
     </div>
 
+    <!-- 歷次作業選單 ＋ 刷新按鈕 ＋ 刪除按鈕 -->
     <div class="header-row">
       <select id="historySelect" onchange="selectHistory(this.value)" style="flex: 1;">
         <option value="">📂 翻歷史紀錄（歷次作業）...</option>
       </select>
+      <button class="btn-refresh" onclick="forceReloadCloud()">🔄 刷新</button>
       <button class="btn-danger" onclick="deleteCurrentAssignment()">🗑️ 刪除</button>
     </div>
 
@@ -195,7 +202,6 @@
 
     let detentionList = [];
 
-    // 觸控與滑鼠防抖防衝突機制
     let isTouchActive = false;
     let lastActionTime = 0;
     let lastActionSeat = null;
@@ -256,7 +262,6 @@
         } catch(e) {}
       }
 
-      // 背景即時與 Google 試算表強制同步最新資料
       syncFromCloud();
     };
 
@@ -285,6 +290,39 @@
         document.getElementById('statusText').textContent = '⚠️ 離線使用中（已載入快取）';
       }
       setProgress(100);
+    }
+
+    /* ⚡ 強制刷新：清除快取並直接向 Google 試算表同步最新資料 */
+    async function forceReloadCloud() {
+      const c = document.getElementById('classSelect').value;
+      const hw = document.getElementById('hwInput').value.trim();
+      if (!c) return;
+
+      localStorage.removeItem('hw_cache_' + c);
+      localStorage.removeItem('hw_classes');
+
+      setProgress(30);
+      document.getElementById('statusText').textContent = `🔄 正在強制連線 Google 刷新 ${c} 班...`;
+
+      try {
+        const classRes = await fetch(`${API_URL}?action=getClasses`);
+        const classData = await classRes.json();
+        localStorage.setItem('hw_classes', JSON.stringify(classData.classes));
+        renderClassOptions(classData.classes, c);
+
+        setProgress(60);
+        const res = await fetch(`${API_URL}?action=getHistory&classId=${encodeURIComponent(c)}&hw=${encodeURIComponent(hw)}`);
+        const data = await res.json();
+        localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
+        applyDataToUI(data);
+        setProgress(100);
+
+        beep(1200, 0.08);
+        document.getElementById('statusText').textContent = `✅ ${c} 班最新資料同步完成！`;
+      } catch(e) {
+        setProgress(100);
+        alert('刷新失敗，請確認網路連線');
+      }
     }
 
     async function onClassChange(isSilent = false) {
@@ -326,7 +364,6 @@
         hSel.appendChild(opt);
       });
 
-      // 雲端同步留人清單
       detentionList = data.detentionList || [];
 
       const grid = document.getElementById('gridArea');
@@ -360,7 +397,6 @@
       document.getElementById('statusText').textContent = data.activeHw ? `已載入：${c} 班「${data.activeHw}」` : `請在上方輸入作業名稱並按【建立】`;
     }
 
-    // ⚡ 核心修復：發送 createAssignment 建立實體欄位
     async function createOrLoadAssignment() {
       const hw = document.getElementById('hwInput').value.trim();
       const c = document.getElementById('classSelect').value;
@@ -510,13 +546,12 @@
         }
       } else {
         let nextVal = currentVal;
-        if (currentCellVal === currentVal) nextVal = ''; // 只有完全相同時才取消還原
+        if (currentCellVal === currentVal) nextVal = '';
         beep(nextVal ? 1400 : 880, 0.06);
         saveRecord(seatNo, studentName, nextVal);
       }
     }
 
-    // ⚡ 雲端同步留人切換
     function toggleDetention(seatNo, studentName) {
       const idx = detentionList.indexOf(seatNo);
       if (idx > -1) {
