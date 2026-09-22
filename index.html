@@ -7,7 +7,7 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-touch-callout: none; }
-    body { margin: 0; padding: 10px; background: #f8fafc; color: #1e293b; }
+    body { margin: 0; padding: 8px; background: #f8fafc; color: #1e293b; }
     
     #topProgressBar {
       position: fixed; top: 0; left: 0; height: 3px; width: 0%;
@@ -17,25 +17,30 @@
 
     .yellow-card {
       background: #fefce8; border: 2px solid #ca8a04; border-radius: 12px;
-      padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 12px;
+      padding: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 10px;
     }
-    .header-row { display: flex; gap: 6px; margin-bottom: 8px; }
-    select, input { padding: 9px 10px; border: 1.5px solid #d97706; border-radius: 8px; font-size: 1rem; background: #fff; outline: none; }
-    
-    .btn-create { background: #ca8a04; color: #fff; border: none; border-radius: 8px; padding: 0 14px; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
-    .btn-create:active { transform: scale(0.96); background: #b45309; }
-    
-    /* 🔄 刷新按鈕 */
-    .btn-refresh { background: #0284c7; color: #fff; border: none; border-radius: 8px; padding: 0 10px; font-weight: bold; font-size: 0.9rem; cursor: pointer; white-space: nowrap; }
-    .btn-refresh:active { transform: scale(0.96); background: #0369a1; }
-    
-    .btn-danger { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 0 10px; font-weight: bold; cursor: pointer; }
 
-    /* 模式列 */
-    .mode-bar { display: flex; gap: 5px; margin-bottom: 6px; }
+    .header-row { display: flex; gap: 5px; margin-bottom: 8px; align-items: stretch; width: 100%; }
+    .header-row select, .header-row input {
+      min-width: 0; padding: 8px 6px; border: 1.5px solid #d97706; border-radius: 8px;
+      font-size: 0.95rem; background: #fff; outline: none;
+    }
+    
+    #classSelect { width: 84px; flex-shrink: 0; padding-left: 4px; padding-right: 2px; }
+    #hwInput { flex: 1; min-width: 0; }
+    #historySelect { flex: 1; min-width: 0; }
+
+    .header-row button { flex-shrink: 0; white-space: nowrap; }
+    .btn-create { background: #ca8a04; color: #fff; border: none; border-radius: 8px; padding: 0 12px; font-weight: bold; font-size: 0.9rem; cursor: pointer; }
+    .btn-create:active { transform: scale(0.96); background: #b45309; }
+    .btn-refresh { background: #0284c7; color: #fff; border: none; border-radius: 8px; padding: 0 8px; font-weight: bold; font-size: 0.82rem; cursor: pointer; }
+    .btn-refresh:active { transform: scale(0.96); background: #0369a1; }
+    .btn-danger { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 0 8px; font-weight: bold; font-size: 0.82rem; cursor: pointer; }
+
+    .mode-bar { display: flex; gap: 4px; margin-bottom: 6px; }
     .mode-btn {
-      flex: 1; padding: 8px 2px; border: 1.5px solid #ca8a04; background: #fff;
-      border-radius: 8px; font-weight: 800; font-size: 0.88rem; text-align: center; cursor: pointer; white-space: nowrap;
+      flex: 1; min-width: 0; padding: 8px 1px; border: 1.5px solid #ca8a04; background: #fff;
+      border-radius: 8px; font-weight: 800; font-size: 0.85rem; text-align: center; cursor: pointer; white-space: nowrap;
     }
     .mode-btn.active { background: #eab308; color: #fff; }
     .mode-btn.reject { color: #dc2626; }
@@ -62,23 +67,22 @@
     #reader { width: 100%; }
 
     .feedback {
-      text-align: center; font-weight: 800; font-size: 1.05rem; margin: 6px 0 10px 0;
+      text-align: center; font-weight: 800; font-size: 1rem; margin: 6px 0 10px 0;
       min-height: 28px; color: #854d0e; padding: 4px; background: rgba(254, 240, 138, 0.4); border-radius: 6px;
       display: flex; align-items: center; justify-content: center; gap: 6px;
     }
 
     .btn-save-all {
-      display: block; width: 100%; padding: 14px; background: #16a34a; color: #fff;
-      font-size: 1.15rem; font-weight: 900; border: none; border-radius: 10px;
+      display: block; width: 100%; padding: 13px; background: #16a34a; color: #fff;
+      font-size: 1.1rem; font-weight: 900; border: none; border-radius: 10px;
       cursor: pointer; box-shadow: 0 4px 8px rgba(22, 163, 74, 0.25); margin-bottom: 12px;
     }
     .btn-save-all:active { background: #15803d; transform: scale(0.98); }
 
-    /* 5 格大號碼格 */
-    .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
+    .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 14px; }
     .seat-cell {
       position: relative; background: #fff; border: 2px solid #d97706; border-radius: 10px;
-      text-align: center; padding: 8px 2px; min-height: 68px; cursor: pointer;
+      text-align: center; padding: 8px 2px; min-height: 66px; cursor: pointer;
       display: flex; flex-direction: column; justify-content: space-between; user-select: none;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05); touch-action: manipulation;
       transition: transform 0.1s ease, box-shadow 0.1s ease;
@@ -97,7 +101,6 @@
     .seat-cell.exempt { background: #fef08a; border-color: #ca8a04; }
     .seat-cell.exempt .seat-val { color: #854d0e; font-size: 1.05rem; }
 
-    /* 🚨 留人角標 */
     .badge-detention {
       position: absolute; top: -5px; right: -5px; background: #ef4444; color: #fff;
       font-size: 0.75rem; border-radius: 50%; width: 22px; height: 22px;
@@ -105,7 +108,6 @@
       z-index: 5;
     }
 
-    /* 🚨 下課留下來卡片 */
     .detention-card {
       background: #fff; border: 2px solid #ef4444; border-radius: 12px;
       padding: 12px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.1);
@@ -132,21 +134,19 @@
 
   <div class="yellow-card">
     <div class="header-row">
-      <select id="classSelect" onchange="onClassChange()" style="width: 35%;"></select>
-      <input type="text" id="hwInput" placeholder="輸入作業名稱" style="flex: 1;" value="今日作業">
-      <button class="btn-create" onclick="createOrLoadAssignment()">建立</button>
+      <select id="classSelect" onchange="onClassChange()"></select>
+      <input type="text" id="hwInput" placeholder="輸入作業名稱" value="今日作業">
+      <button class="btn-create" id="btnCreate" onclick="createOrLoadAssignment()">建立</button>
     </div>
 
-    <!-- 歷次作業選單 ＋ 刷新按鈕 ＋ 刪除按鈕 -->
     <div class="header-row">
-      <select id="historySelect" onchange="selectHistory(this.value)" style="flex: 1;">
-        <option value="">📂 翻歷史紀錄（歷次作業）...</option>
+      <select id="historySelect" onchange="selectHistory(this.value)">
+        <option value="">📂 翻歷次作業...</option>
       </select>
       <button class="btn-refresh" onclick="forceReloadCloud()">🔄 刷新</button>
       <button class="btn-danger" onclick="deleteCurrentAssignment()">🗑️ 刪除</button>
     </div>
 
-    <!-- 第一列：作業批改 -->
     <div class="mode-bar">
       <div class="mode-btn active" onclick="setMode('✓', this)">打勾 ✓</div>
       <div class="mode-btn" onclick="setMode('補', this)">補交</div>
@@ -155,7 +155,6 @@
       <div class="mode-btn eraser" onclick="setMode('', this)">🧹 擦除</div>
     </div>
 
-    <!-- 第二列：黃燈免計 ＋ 留人按鈕 -->
     <div class="mode-bar">
       <div class="mode-btn exempt" onclick="setMode('自學', this)">🟡 自學</div>
       <div class="mode-btn exempt" onclick="setMode('資源', this)">🟡 資源</div>
@@ -262,6 +261,15 @@
         } catch(e) {}
       }
 
+      // 綁定建立按鈕觸控直通（防止被鍵盤縮回事件吞掉）
+      const btnCreate = document.getElementById('btnCreate');
+      if (btnCreate) {
+        btnCreate.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          createOrLoadAssignment();
+        });
+      }
+
       syncFromCloud();
     };
 
@@ -292,7 +300,6 @@
       setProgress(100);
     }
 
-    /* ⚡ 強制刷新：清除快取並直接向 Google 試算表同步最新資料 */
     async function forceReloadCloud() {
       const c = document.getElementById('classSelect').value;
       const hw = document.getElementById('hwInput').value.trim();
@@ -356,7 +363,7 @@
       document.getElementById('hwInput').value = data.activeHw || '';
 
       const hSel = document.getElementById('historySelect');
-      hSel.innerHTML = '<option value="">📂 翻歷史紀錄（歷次作業）...</option>';
+      hSel.innerHTML = '<option value="">📂 翻歷次作業...</option>';
       (data.assignments || []).forEach(a => {
         const opt = document.createElement('option');
         opt.value = a; opt.textContent = '📄 ' + a;
@@ -397,8 +404,12 @@
       document.getElementById('statusText').textContent = data.activeHw ? `已載入：${c} 班「${data.activeHw}」` : `請在上方輸入作業名稱並按【建立】`;
     }
 
+    // ⚡ 核心修復：強制收起鍵盤＋GET 快速管道，徹底杜絕建立失敗
     async function createOrLoadAssignment() {
-      const hw = document.getElementById('hwInput').value.trim();
+      const input = document.getElementById('hwInput');
+      input.blur(); // 立即收合虛擬鍵盤
+
+      const hw = input.value.trim();
       const c = document.getElementById('classSelect').value;
       if (!hw) {
         alert('請先在左邊欄位輸入作業名稱！');
@@ -406,19 +417,20 @@
       }
       setProgress(40);
       document.getElementById('statusText').textContent = `正在建立「${hw}」...`;
+
       try {
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          body: JSON.stringify({ action: 'createAssignment', classId: c, assignment: hw })
-        });
+        const url = `${API_URL}?action=createAssignment&classId=${encodeURIComponent(c)}&assignment=${encodeURIComponent(hw)}`;
+        const res = await fetch(url);
         const data = await res.json();
+        if (data.success === false) throw new Error(data.error);
+
         localStorage.setItem('hw_cache_' + c, JSON.stringify(data));
         applyDataToUI(data);
         setProgress(100);
         document.getElementById('statusText').textContent = `✅ 成功建立並載入「${hw}」！`;
       } catch(e) {
         setProgress(100);
-        alert('建立失敗，請檢查網路連線');
+        alert('建立失敗，請檢查網路連線或重新整理');
       }
     }
 
@@ -445,16 +457,30 @@
       handleCellClick(seatNo, studentName);
     }
 
+    // ⚡ 核心修復：捲動位移偵測（移動超過 8px 視為滑動畫面，絕不觸發任何點擊）
     function attachCellEvents(cell, seatNo, studentName) {
       let pressTimer = null;
       let isLongPress = false;
+      let isMoved = false;
+      let startX = 0;
+      let startY = 0;
 
-      function startPress() {
+      function startPress(x, y) {
         isLongPress = false;
+        isMoved = false;
+        startX = x;
+        startY = y;
         pressTimer = setTimeout(() => {
           isLongPress = true;
           toggleDetention(seatNo, studentName);
-        }, 450);
+        }, 480);
+      }
+
+      function checkMove(x, y) {
+        if (Math.abs(x - startX) > 8 || Math.abs(y - startY) > 8) {
+          isMoved = true;
+          cancelPress();
+        }
       }
 
       function cancelPress() {
@@ -464,31 +490,48 @@
         }
       }
 
+      // 觸控螢幕／手機原生事件
       cell.addEventListener('touchstart', (e) => {
         isTouchActive = true;
-        startPress();
+        const touch = e.touches[0];
+        startPress(touch.clientX, touch.clientY);
+      }, { passive: true });
+
+      cell.addEventListener('touchmove', (e) => {
+        const touch = e.touches[0];
+        checkMove(touch.clientX, touch.clientY);
       }, { passive: true });
 
       cell.addEventListener('touchend', (e) => {
         cancelPress();
-        if (!isLongPress) {
+        // ⚡ 關鍵防線：只有在「手指完全沒滑動」且「不是長按」時才算點擊！
+        if (!isMoved && !isLongPress) {
           safeCellClick(seatNo, studentName);
         }
         setTimeout(() => { isTouchActive = false; }, 400);
       });
 
-      cell.addEventListener('touchmove', cancelPress);
-      cell.addEventListener('touchcancel', cancelPress);
+      cell.addEventListener('touchcancel', () => {
+        cancelPress();
+        isMoved = true;
+        setTimeout(() => { isTouchActive = false; }, 400);
+      });
 
+      // 電腦滑鼠事件（防觸控衝突）
       cell.addEventListener('mousedown', (e) => {
         if (isTouchActive) return;
-        startPress();
+        startPress(e.clientX, e.clientY);
+      });
+
+      cell.addEventListener('mousemove', (e) => {
+        if (isTouchActive) return;
+        checkMove(e.clientX, e.clientY);
       });
 
       cell.addEventListener('mouseup', (e) => {
         if (isTouchActive) return;
         cancelPress();
-        if (!isLongPress) {
+        if (!isMoved && !isLongPress) {
           safeCellClick(seatNo, studentName);
         }
       });
